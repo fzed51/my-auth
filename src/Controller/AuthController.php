@@ -53,11 +53,9 @@ class AuthController
         }
     }
 
-    public function verifyEmail(ServerRequestInterface $request): ResponseInterface
+    public function verifyEmail(ServerRequestInterface $request, string $token): ResponseInterface
     {
         try {
-            $token = $request->getAttribute('token');
-
             if (empty($token)) {
                 return $this->createErrorResponse(400, 'Invalid request', 'Token is required');
             }

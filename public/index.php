@@ -182,9 +182,7 @@ $app->group('/api/auth', function ($group) use ($container) {
     // Email verification
     $group->get('/verify-email/{token}', function ($request, $response, $args) use ($container) {
         $authController = $container->get('MyAuth\Controller\AuthController');
-        // Ajouter le token aux attributs de la requête
-        $request = $request->withAttribute('token', $args['token']);
-        return $authController->verifyEmail($request);
+        return $authController->verifyEmail($request,  $args['token']);
     });
     
     // Resend verification email

@@ -14,8 +14,6 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./database/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-      - ./database/mysql.conf:/etc/mysql/conf.d/custom.cnf
     networks:
       - my-auth-network
     command: --default-authentication-plugin=mysql_native_password

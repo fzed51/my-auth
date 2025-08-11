@@ -1,0 +1,7 @@
+parameters:
+    level: max
+    paths:
+        - src
+    ignoreErrors:
+        # Add specific ignores if needed
+    checkMissingIterableValueType: false

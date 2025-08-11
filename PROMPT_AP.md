@@ -171,7 +171,7 @@ Vous êtes un automate de programmation expert chargé de créer un service d'au
 - Durée de validité des tokens
 - Issuer et audience
 
-### 4. Services (config/services.php)
+### 4. Services (config/services.json)
 - Liste des services autorisés
 - API keys associées
 - Métadonnées des services

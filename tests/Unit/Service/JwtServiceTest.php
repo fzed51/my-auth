@@ -7,6 +7,7 @@ namespace MyAuth\Tests\Unit\Service;
 use PHPUnit\Framework\TestCase;
 use MyAuth\Service\JwtService;
 use MyAuth\Repository\JwtBlacklistRepository;
+use MyAuth\Repository\RefreshTokenRepository;
 
 /**
  * @covers \MyAuth\Service\JwtService
@@ -15,10 +16,12 @@ class JwtServiceTest extends TestCase
 {
     private JwtService $jwtService;
     private JwtBlacklistRepository $blacklistRepository;
+    private RefreshTokenRepository $refreshTokenRepository;
 
     protected function setUp(): void
     {
         $this->blacklistRepository = $this->createMock(JwtBlacklistRepository::class);
+        $this->refreshTokenRepository = $this->createMock(RefreshTokenRepository::class);
         
         $config = [
             'secret' => 'test-secret-key-for-testing-only',
@@ -29,7 +32,7 @@ class JwtServiceTest extends TestCase
             'leeway' => 60
         ];
         
-        $this->jwtService = new JwtService($config, $this->blacklistRepository);
+        $this->jwtService = new JwtService($config, $this->blacklistRepository, $this->refreshTokenRepository);
     }
 
     public function testGenerateToken(): void

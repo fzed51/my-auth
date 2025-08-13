@@ -59,7 +59,7 @@ class JwtBlacklistRepository
         // En pratique, on pourrait soit :
         // 1. Maintenir une table des tokens émis
         // 2. Utiliser une approche où on blacklist par date (tous les tokens avant une certaine date)
-        
+
         $sql = "INSERT INTO jwt_blacklist (jti, user_id, expires_at, created_at) 
                 VALUES (:jti, :user_id, :expires_at, :created_at)";
 

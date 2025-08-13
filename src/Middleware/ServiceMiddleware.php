@@ -16,16 +16,16 @@ class ServiceMiddleware implements MiddlewareInterface
     {
         // Récupérer les informations du service depuis la requête (ajoutées par ApiKeyMiddleware)
         $service = $request->getAttribute('service');
-        
+
         if ($service) {
             // Ajouter des métadonnées supplémentaires ou effectuer des validations
             $request = $request->withAttribute('service_id', $service['id'] ?? null);
             $request = $request->withAttribute('service_description', $service['description'] ?? '');
             $request = $request->withAttribute('service_rate_limits', $service['rate_limit'] ?? []);
-            
+
             // Log de l'utilisation du service (optionnel)
             $this->logServiceUsage($service, $request);
-            
+
             // Vérification du rate limiting (optionnel)
             if (!$this->checkRateLimit($service, $request)) {
                 return $this->createRateLimitResponse();
@@ -34,7 +34,7 @@ class ServiceMiddleware implements MiddlewareInterface
 
         // Ajouter des headers de réponse communs
         $response = $handler->handle($request);
-        
+
         return $this->addServiceHeaders($response, $service);
     }
 
@@ -51,7 +51,7 @@ class ServiceMiddleware implements MiddlewareInterface
             'timestamp' => date('c'),
             'ip' => $this->getClientIp($request)
         ];
-        
+
         // Log en mode développement
         if ($_ENV['APP_DEBUG'] ?? false) {
             error_log('Service Usage: ' . json_encode($logData));
@@ -65,9 +65,9 @@ class ServiceMiddleware implements MiddlewareInterface
     {
         // Cette implémentation est basique et ne persiste pas les données
         // Dans un vrai projet, on utiliserait Redis ou une base de données
-        
+
         $rateLimits = $service['rate_limit'] ?? [];
-        
+
         if (empty($rateLimits)) {
             return true; // Pas de limite
         }
@@ -100,16 +100,16 @@ class ServiceMiddleware implements MiddlewareInterface
     private function addServiceHeaders(ResponseInterface $response, ?array $service): ResponseInterface
     {
         $response = $response->withHeader('X-API-Version', '1.0');
-        
+
         if ($service) {
             $response = $response->withHeader('X-Service-Name', $service['name']);
         }
-        
+
         // Headers de sécurité
         $response = $response->withHeader('X-Content-Type-Options', 'nosniff');
         $response = $response->withHeader('X-Frame-Options', 'DENY');
         $response = $response->withHeader('X-XSS-Protection', '1; mode=block');
-        
+
         return $response;
     }
 
@@ -119,7 +119,7 @@ class ServiceMiddleware implements MiddlewareInterface
     private function getClientIp(ServerRequestInterface $request): string
     {
         $serverParams = $request->getServerParams();
-        
+
         // Vérifier les headers de proxy
         $headers = [
             'HTTP_CLIENT_IP',

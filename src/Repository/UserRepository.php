@@ -198,7 +198,7 @@ class UserRepository
                 WHERE is_active = 1 AND is_email_verified = 1 
                 ORDER BY created_at DESC 
                 LIMIT :limit OFFSET :offset";
-        
+
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
@@ -243,7 +243,7 @@ class UserRepository
                 AND is_active = 1 
                 ORDER BY created_at DESC 
                 LIMIT :limit";
-        
+
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindParam(':search', $searchTerm, PDO::PARAM_STR);
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);

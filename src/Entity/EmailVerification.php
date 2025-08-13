@@ -141,7 +141,7 @@ class EmailVerification
     {
         $token = self::generateToken();
         $expiresAt = (new DateTime())->modify("+{$expirationHours} hours");
-        
+
         return new self($userId, $token, $expiresAt);
     }
 

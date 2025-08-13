@@ -26,7 +26,7 @@ class JwtMiddleware implements MiddlewareInterface
         try {
             // Extraire le token JWT du header Authorization
             $token = $this->extractTokenFromRequest($request);
-            
+
             if (!$token) {
                 return $this->createErrorResponse('Token JWT manquant', 401);
             }
@@ -46,7 +46,6 @@ class JwtMiddleware implements MiddlewareInterface
             }
 
             return $handler->handle($request);
-
         } catch (AuthException $e) {
             return $this->createErrorResponse($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
@@ -60,7 +59,7 @@ class JwtMiddleware implements MiddlewareInterface
     private function extractTokenFromRequest(ServerRequestInterface $request): ?string
     {
         $authHeader = $request->getHeaderLine('Authorization');
-        
+
         if (empty($authHeader)) {
             return null;
         }

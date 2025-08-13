@@ -26,7 +26,7 @@ class ApiKeyMiddleware implements MiddlewareInterface
         try {
             // Extraire l'API key des headers
             $apiKey = $this->serviceAuthService->extractApiKeyFromHeaders($request->getHeaders());
-            
+
             if (!$apiKey) {
                 return $this->createErrorResponse('API key manquante', 401);
             }
@@ -37,7 +37,7 @@ class ApiKeyMiddleware implements MiddlewareInterface
             // Vérifier l'accès à la route
             $route = $request->getUri()->getPath();
             $method = $request->getMethod();
-            
+
             if (!$this->serviceAuthService->validateServiceAccess($service, $route, $method)) {
                 return $this->createErrorResponse('Accès non autorisé pour ce service', 403);
             }
@@ -48,7 +48,6 @@ class ApiKeyMiddleware implements MiddlewareInterface
             $request = $request->withAttribute('service_permissions', $service['permissions'] ?? []);
 
             return $handler->handle($request);
-
         } catch (AuthException $e) {
             return $this->createErrorResponse($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {

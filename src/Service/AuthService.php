@@ -41,7 +41,7 @@ class AuthService
         try {
             // Rechercher l'utilisateur
             $user = $this->userRepository->findByEmail($email);
-            
+
             if (!$user) {
                 $this->recordLoginAttempt($email, $ipAddress, false, $userAgent);
                 throw new AuthException('Identifiants invalides');
@@ -76,6 +76,13 @@ class AuthService
 
             $token = $this->jwtService->generateToken($user->getId(), $additionalClaims);
 
+            // Générer un refresh token
+            $refreshToken = $this->jwtService->generateRefreshToken(
+                $user->getId(),
+                $ipAddress,
+                $userAgent
+            );
+
             // Mettre à jour la date de dernière connexion
             $this->userRepository->updateLastLogin($user->getId());
 
@@ -84,10 +91,10 @@ class AuthService
 
             return [
                 'token' => $token,
+                'refresh_token' => $refreshToken,
                 'user' => $user->toArray(),
                 'expiresIn' => $this->jwtService->getConfig()['expiration']
             ];
-
         } catch (AuthException $e) {
             throw $e;
         } catch (\Exception $e) {
@@ -118,33 +125,16 @@ class AuthService
     }
 
     /**
-     * Rafraîchit un token JWT
-     */
-    public function refreshToken(string $token): array
-    {
-        try {
-            $newToken = $this->jwtService->refreshToken($token);
-            
-            return [
-                'token' => $newToken,
-                'expiresIn' => $this->jwtService->getConfig()['expiration']
-            ];
-        } catch (\Exception $e) {
-            throw new AuthException('Impossible de rafraîchir le token');
-        }
-    }
-
-    /**
      * Valide un token JWT et retourne les informations utilisateur
      */
     public function validateToken(string $token): array
     {
         try {
             $payload = $this->jwtService->validateToken($token);
-            
+
             // Vérifier que l'utilisateur existe toujours et est actif
             $user = $this->userRepository->findById((int)$payload['user_id']);
-            
+
             if (!$user || !$user->isActive()) {
                 throw new AuthException('Utilisateur introuvable ou inactif');
             }
@@ -250,7 +240,7 @@ class AuthService
     public function isSuspiciousLogin(string $email, string $ipAddress, string $userAgent): bool
     {
         $recentAttempts = $this->loginAttemptRepository->findAttemptsByEmail($email, 24 * 7); // 7 jours
-        
+
         // Vérifier si cette IP a déjà été utilisée
         $knownIp = false;
         foreach ($recentAttempts as $attempt) {
@@ -272,5 +262,50 @@ class AuthService
         // Cette méthode nécessiterait l'injection de EmailService
         // Pour l'instant, on retourne true
         return true;
+    }
+
+    /**
+     * Renouvelle un token d'accès avec un refresh token
+     */
+    public function refreshToken(string $refreshToken, string $ipAddress, ?string $userAgent = null): array
+    {
+        try {
+            // Renouveler les tokens (ceci valide le refresh token et le révoque automatiquement)
+            $tokenData = $this->jwtService->refreshAccessToken($refreshToken);
+
+            // Extraire l'user_id du nouveau JWT pour obtenir les infos utilisateur
+            $jwtPayload = $this->jwtService->validateToken($tokenData['access_token']);
+            $userId = $jwtPayload['user_id'];
+            
+            $user = $this->userRepository->findById($userId);
+
+            if (!$user) {
+                throw new AuthException('Utilisateur introuvable', 404);
+            }
+
+            // Mettre à jour la date de dernière connexion
+            $this->userRepository->updateLastLogin($user->getId());
+
+            return [
+                'token' => $tokenData['access_token'],
+                'refresh_token' => $tokenData['refresh_token'],
+                'user' => $user->toArray(),
+                'expiresIn' => $tokenData['expires_in'],
+                'token_type' => $tokenData['token_type']
+            ];
+
+        } catch (AuthException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            throw new AuthException('Erreur lors du renouvellement du token', 500);
+        }
+    }
+
+    /**
+     * Révoque tous les refresh tokens d'un utilisateur
+     */
+    public function revokeAllRefreshTokens(int $userId): bool
+    {
+        return $this->jwtService->revokeAllRefreshTokens($userId);
     }
 }

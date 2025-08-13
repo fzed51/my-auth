@@ -52,6 +52,7 @@ class User
     public function setEmail(string $email): self
     {
         $this->email = $email;
+        $this->touch();
         return $this;
     }
 
@@ -103,7 +104,18 @@ class User
         return $this->isEmailVerified;
     }
 
+    public function getIsEmailVerified(): bool
+    {
+        return $this->isEmailVerified;
+    }
+
     public function setEmailVerified(bool $isEmailVerified): self
+    {
+        $this->isEmailVerified = $isEmailVerified;
+        return $this;
+    }
+
+    public function setIsEmailVerified(bool $isEmailVerified): self
     {
         $this->isEmailVerified = $isEmailVerified;
         return $this;
@@ -114,7 +126,18 @@ class User
         return $this->isActive;
     }
 
+    public function getIsActive(): bool
+    {
+        return $this->isActive;
+    }
+
     public function setActive(bool $isActive): self
+    {
+        $this->isActive = $isActive;
+        return $this;
+    }
+
+    public function setIsActive(bool $isActive): self
     {
         $this->isActive = $isActive;
         return $this;

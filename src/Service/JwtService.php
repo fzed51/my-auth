@@ -9,6 +9,7 @@ use Firebase\JWT\Key;
 use Firebase\JWT\ExpiredException;
 use Firebase\JWT\SignatureInvalidException;
 use MyAuth\Repository\JwtBlacklistRepository;
+use MyAuth\Repository\RefreshTokenRepository;
 use MyAuth\Exception\AuthException;
 use DateTime;
 use Exception;
@@ -17,11 +18,16 @@ class JwtService
 {
     private array $config;
     private JwtBlacklistRepository $blacklistRepository;
+    private RefreshTokenRepository $refreshTokenRepository;
 
-    public function __construct(array $config, JwtBlacklistRepository $blacklistRepository)
-    {
+    public function __construct(
+        array $config,
+        JwtBlacklistRepository $blacklistRepository,
+        RefreshTokenRepository $refreshTokenRepository
+    ) {
         $this->config = $config;
         $this->blacklistRepository = $blacklistRepository;
+        $this->refreshTokenRepository = $refreshTokenRepository;
     }
 
     /**
@@ -99,7 +105,7 @@ class JwtService
     {
         try {
             $payload = $this->decodeTokenWithoutValidation($token);
-            
+
             if (!isset($payload['jti'], $payload['user_id'], $payload['exp'])) {
                 return false;
             }
@@ -195,7 +201,7 @@ class JwtService
     public function refreshToken(string $token): string
     {
         $payload = $this->validateToken($token);
-        
+
         // Révoque l'ancien token
         $this->revokeToken($token);
 
@@ -237,5 +243,117 @@ class JwtService
     public function cleanExpiredTokens(): int
     {
         return $this->blacklistRepository->cleanExpiredTokens();
+    }
+
+    /**
+     * Génère un refresh token pour un utilisateur
+     */
+    public function generateRefreshToken(
+        int $userId,
+        ?string $ipAddress = null,
+        ?string $userAgent = null
+    ): string {
+        $refreshToken = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $refreshToken);
+        $jti = $this->generateJti();
+        
+        // Refresh token valide pour 30 jours par défaut
+        $expiresAt = new DateTime();
+        $expiresAt->modify('+30 days');
+        
+        $this->refreshTokenRepository->create(
+            $userId,
+            $tokenHash,
+            $jti,
+            $expiresAt,
+            $ipAddress,
+            $userAgent
+        );
+        
+        // Limiter le nombre de refresh tokens par utilisateur
+        $this->refreshTokenRepository->limitTokensPerUser($userId, 5);
+        
+        return $refreshToken;
+    }
+
+    /**
+     * Valide un refresh token et retourne les informations utilisateur
+     */
+    public function validateRefreshToken(string $refreshToken): array
+    {
+        $tokenHash = hash('sha256', $refreshToken);
+        
+        $tokenData = $this->refreshTokenRepository->findByTokenHash($tokenHash);
+        
+        if (!$tokenData) {
+            throw new AuthException('Refresh token invalide', 401);
+        }
+        
+        // Vérifier l'expiration
+        $expiresAt = new DateTime($tokenData['expires_at']);
+        if ($expiresAt < new DateTime()) {
+            throw new AuthException('Refresh token expiré', 401);
+        }
+        
+        // Vérifier que l'utilisateur est toujours actif
+        if (!$tokenData['user_is_active'] || !$tokenData['user_is_email_verified']) {
+            throw new AuthException('Compte utilisateur inactif', 401);
+        }
+        
+        return [
+            'user_id' => (int)$tokenData['user_id'],
+            'email' => $tokenData['email'],
+            'jti' => $tokenData['jti']
+        ];
+    }
+
+    /**
+     * Révoque un refresh token
+     */
+    public function revokeRefreshToken(string $refreshToken): bool
+    {
+        $tokenHash = hash('sha256', $refreshToken);
+        return $this->refreshTokenRepository->revoke($tokenHash);
+    }
+
+    /**
+     * Révoque tous les refresh tokens d'un utilisateur
+     */
+    public function revokeAllRefreshTokens(int $userId): bool
+    {
+        return $this->refreshTokenRepository->revokeAllForUser($userId);
+    }
+
+    /**
+     * Renouvelle un token JWT avec un refresh token
+     */
+    public function refreshAccessToken(string $refreshToken, array $additionalClaims = []): array
+    {
+        // Valider le refresh token
+        $tokenData = $this->validateRefreshToken($refreshToken);
+        
+        // Générer un nouveau JWT
+        $newJwtToken = $this->generateToken($tokenData['user_id'], $additionalClaims);
+        
+        // Optionnel : générer un nouveau refresh token (rotation)
+        $newRefreshToken = $this->generateRefreshToken($tokenData['user_id']);
+        
+        // Révoquer l'ancien refresh token (rotation de sécurité)
+        $this->revokeRefreshToken($refreshToken);
+        
+        return [
+            'access_token' => $newJwtToken,
+            'refresh_token' => $newRefreshToken,
+            'expires_in' => $this->config['expiration'],
+            'token_type' => 'Bearer'
+        ];
+    }
+
+    /**
+     * Obtient les refresh tokens actifs d'un utilisateur
+     */
+    public function getActiveRefreshTokens(int $userId): array
+    {
+        return $this->refreshTokenRepository->getActiveTokensForUser($userId);
     }
 }

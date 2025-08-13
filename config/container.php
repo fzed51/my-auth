@@ -46,6 +46,10 @@ $containerBuilder->addDefinitions([
         return new \MyAuth\Repository\LoginAttemptRepository($container->get(PDO::class));
     },
 
+    \MyAuth\Repository\RefreshTokenRepository::class => function (ContainerInterface $container) {
+        return new \MyAuth\Repository\RefreshTokenRepository($container->get(PDO::class));
+    },
+
     // Services
     \MyAuth\Service\UserService::class => function (ContainerInterface $container) {
         $userService = new \MyAuth\Service\UserService(
@@ -69,7 +73,8 @@ $containerBuilder->addDefinitions([
     \MyAuth\Service\JwtService::class => function (ContainerInterface $container) {
         return new \MyAuth\Service\JwtService(
             $container->get('jwt'),
-            $container->get(\MyAuth\Repository\JwtBlacklistRepository::class)
+            $container->get(\MyAuth\Repository\JwtBlacklistRepository::class),
+            $container->get(\MyAuth\Repository\RefreshTokenRepository::class)
         );
     },
     

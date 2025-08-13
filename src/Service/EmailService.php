@@ -19,7 +19,7 @@ class EmailService
     {
         $this->fromAddress = $_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@example.com';
         $this->fromName = $_ENV['MAIL_FROM_NAME'] ?? 'My Auth Service';
-        
+
         $this->initializeMailer();
     }
 
@@ -45,7 +45,7 @@ class EmailService
     public function sendEmailVerification(string $email, string $token): bool
     {
         $verificationUrl = $this->buildVerificationUrl($token);
-        
+
         $subject = 'Vérification de votre adresse email';
         $body = $this->getEmailVerificationTemplate($verificationUrl);
 
@@ -58,7 +58,7 @@ class EmailService
     public function sendPasswordReset(string $email, string $token): bool
     {
         $resetUrl = $this->buildPasswordResetUrl($token);
-        
+
         $subject = 'Réinitialisation de votre mot de passe';
         $body = $this->getPasswordResetTemplate($resetUrl);
 
@@ -201,7 +201,7 @@ class EmailService
     private function getWelcomeTemplate(string $firstName): string
     {
         $greeting = $firstName ? "Bonjour {$firstName}" : "Bonjour";
-        
+
         return "
         <!DOCTYPE html>
         <html>

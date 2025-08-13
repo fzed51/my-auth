@@ -86,7 +86,7 @@ class UserService
 
         // Créer un nouveau token
         $verification = EmailVerification::createForUser($user->getId(), 24);
-        
+
         if (isset($this->verificationRepository)) {
             $this->verificationRepository->save($verification);
         }
@@ -108,7 +108,7 @@ class UserService
         }
 
         $verification = $this->verificationRepository->findByToken($token);
-        
+
         if (!$verification || !$verification->isValid()) {
             return false;
         }
@@ -258,7 +258,7 @@ class UserService
     {
         $total = $this->userRepository->countUsers();
         $verified = $this->userRepository->countActiveUsers();
-        
+
         return $total > 0 ? round(($verified / $total) * 100, 2) : 0;
     }
 

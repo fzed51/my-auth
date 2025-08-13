@@ -26,7 +26,7 @@ class ServiceAuthService
         }
 
         $service = $this->serviceRepository->findByApiKey($apiKey);
-        
+
         if (!$service) {
             throw new AuthException('API key invalide', 401);
         }
@@ -61,9 +61,9 @@ class ServiceAuthService
     {
         // Mapper les routes vers les permissions
         $routePermissions = $this->getRoutePermissions();
-        
+
         $routeKey = strtoupper($method) . ' ' . $route;
-        
+
         if (!isset($routePermissions[$routeKey])) {
             // Route non protégée ou permission par défaut
             return true;
@@ -132,7 +132,7 @@ class ServiceAuthService
         foreach ($possibleHeaders as $header) {
             if (isset($headers[$header])) {
                 $value = is_array($headers[$header]) ? $headers[$header][0] : $headers[$header];
-                
+
                 // Pour Authorization, extraire la partie après "Bearer " ou "ApiKey "
                 if ($header === 'Authorization') {
                     if (preg_match('/^Bearer\s+(.+)$/i', $value, $matches)) {

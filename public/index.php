@@ -41,6 +41,7 @@ $app->group('/api/auth', function (RouteCollectorProxy $group) {
     $group->post('/login', [AuthController::class, 'login']);
     $group->get('/verify-email/{token}', [AuthController::class, 'verifyEmail']);
     $group->post('/resend-verification', [AuthController::class, 'resendVerification']);
+    $group->post('/refresh', [AuthController::class, 'refresh']);
 })->add(ServiceMiddleware::class)->add(ApiKeyMiddleware::class);
 
 // Routes protégées (nécessitent API key + JWT)
@@ -48,7 +49,6 @@ $app->group('/api/auth', function (RouteCollectorProxy $group) {
     $group->get('/me', [AuthController::class, 'me']);
     $group->post('/logout', [AuthController::class, 'logout']);
     $group->post('/logout-all', [AuthController::class, 'logoutAll']);
-    $group->post('/refresh', [AuthController::class, 'refresh']);
 })->add(JwtMiddleware::class)->add(ServiceMiddleware::class)->add(ApiKeyMiddleware::class);
 
 // Route de santé (sans authentification)

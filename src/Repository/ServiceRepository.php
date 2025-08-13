@@ -149,7 +149,7 @@ class ServiceRepository
     public function validateService(array $service): bool
     {
         $requiredFields = ['id', 'name', 'api_key', 'is_active'];
-        
+
         foreach ($requiredFields as $field) {
             if (!isset($service[$field])) {
                 return false;

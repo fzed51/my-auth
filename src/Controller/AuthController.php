@@ -32,7 +32,7 @@ class AuthController
     {
         try {
             $data = json_decode($request->getBody()->getContents(), true);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return $this->jsonResponse($response, [
                     'error' => true,
@@ -48,7 +48,6 @@ class AuthController
                 'message' => 'Utilisateur créé avec succès. Veuillez vérifier votre email.',
                 'user' => $user->toArray()
             ], 201);
-
         } catch (ValidationException $e) {
             return $this->jsonResponse($response, [
                 'error' => true,
@@ -71,7 +70,7 @@ class AuthController
     {
         try {
             $data = json_decode($request->getBody()->getContents(), true);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return $this->jsonResponse($response, [
                     'error' => true,
@@ -92,7 +91,6 @@ class AuthController
                 'message' => 'Connexion réussie',
                 'data' => $authResult
             ]);
-
         } catch (ValidationException $e) {
             return $this->jsonResponse($response, [
                 'error' => true,
@@ -120,7 +118,7 @@ class AuthController
     {
         try {
             $token = $args['token'] ?? '';
-            
+
             if (empty($token)) {
                 return $this->jsonResponse($response, [
                     'error' => true,
@@ -141,7 +139,6 @@ class AuthController
                     'message' => 'Token invalide ou expiré'
                 ], 400);
             }
-
         } catch (\Exception $e) {
             return $this->jsonResponse($response, [
                 'error' => true,
@@ -158,7 +155,7 @@ class AuthController
     {
         try {
             $token = $request->getAttribute('jwt_token');
-            
+
             if (!$token) {
                 return $this->jsonResponse($response, [
                     'error' => true,
@@ -172,7 +169,6 @@ class AuthController
                 'success' => true,
                 'message' => 'Déconnexion réussie'
             ]);
-
         } catch (\Exception $e) {
             return $this->jsonResponse($response, [
                 'error' => true,
@@ -189,7 +185,7 @@ class AuthController
     {
         try {
             $userId = $request->getAttribute('user_id');
-            
+
             if (!$userId) {
                 return $this->jsonResponse($response, [
                     'error' => true,
@@ -203,7 +199,6 @@ class AuthController
                 'success' => true,
                 'message' => 'Déconnexion de tous les appareils réussie'
             ]);
-
         } catch (\Exception $e) {
             return $this->jsonResponse($response, [
                 'error' => true,
@@ -219,23 +214,36 @@ class AuthController
     public function refresh(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         try {
-            $token = $request->getAttribute('jwt_token');
+            $data = $request->getParsedBody();
             
-            if (!$token) {
+            // Si getParsedBody() est null, essayons de parser manuellement
+            if ($data === null) {
+                $body = (string) $request->getBody();
+                $data = json_decode($body, true);
+            }
+            
+            if (!isset($data['refresh_token']) || empty($data['refresh_token'])) {
                 return $this->jsonResponse($response, [
                     'error' => true,
-                    'message' => 'Token manquant'
+                    'message' => 'Refresh token manquant'
                 ], 400);
             }
 
-            $refreshResult = $this->authService->refreshToken($token);
+            // Récupérer les informations de la requête
+            $ipAddress = $this->getClientIp($request);
+            $userAgent = $request->getHeaderLine('User-Agent');
+            
+            $refreshResult = $this->authService->refreshToken(
+                $data['refresh_token'],
+                $ipAddress,
+                $userAgent
+            );
 
             return $this->jsonResponse($response, [
                 'success' => true,
                 'message' => 'Token rafraîchi avec succès',
                 'data' => $refreshResult
             ]);
-
         } catch (AuthException $e) {
             return $this->jsonResponse($response, [
                 'error' => true,
@@ -257,7 +265,7 @@ class AuthController
     {
         try {
             $payload = $request->getAttribute('jwt_payload');
-            
+
             if (!$payload) {
                 return $this->jsonResponse($response, [
                     'error' => true,
@@ -275,7 +283,6 @@ class AuthController
                     'tokenExpiringSoon' => $request->getAttribute('token_expiring_soon', false)
                 ]
             ]);
-
         } catch (\Exception $e) {
             return $this->jsonResponse($response, [
                 'error' => true,
@@ -327,7 +334,6 @@ class AuthController
                 'success' => true,
                 'message' => 'Email de vérification envoyé'
             ]);
-
         } catch (\Exception $e) {
             return $this->jsonResponse($response, [
                 'error' => true,
@@ -353,7 +359,7 @@ class AuthController
     private function getClientIp(ServerRequestInterface $request): string
     {
         $serverParams = $request->getServerParams();
-        
+
         $headers = [
             'HTTP_CLIENT_IP',
             'HTTP_X_FORWARDED_FOR',

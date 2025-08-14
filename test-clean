@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# Script pour exécuter PHPUnit sans les messages de dépréciation PHP-DI
+
+php -d error_reporting="E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED" ./vendor/bin/phpunit "$@"

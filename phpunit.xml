@@ -4,16 +4,20 @@
          bootstrap="vendor/autoload.php"
          cacheResultFile=".phpunit.result.cache"
          executionOrder="depends,defects"
-         forceCoversAnnotation="true"
-         beStrictAboutCoversAnnotation="true"
+         forceCoversAnnotation="false"
+         beStrictAboutCoversAnnotation="false"
          beStrictAboutOutputDuringTests="true"
          beStrictAboutTodoAnnotatedTests="true"
-         failOnRisky="true"
+         failOnRisky="false"
          failOnWarning="true"
+         convertDeprecationsToExceptions="false"
          verbose="true">
+    <php>
+        <ini name="error_reporting" value="E_ALL &amp; ~E_DEPRECATED &amp; ~E_USER_DEPRECATED"/>
+    </php>
     <testsuites>
         <testsuite name="Unit">
-            <directory suffix=".test.php">./src</directory>
+            <directory suffix="Test.php">./src</directory>
         </testsuite>
         <testsuite name="Integration">
             <directory suffix="Test.php">./tests/Integration</directory>

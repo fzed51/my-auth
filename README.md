@@ -19,17 +19,29 @@ my-auth/
 ├── config/                     # Configuration
 │   ├── container.php          # Configuration PHP-DI
 │   ├── database.php           # Configuration base de données
-│   ├── services.json          # Services autorisés
+│   ├── services.json          # Services autorisés (API Keys)
 │   └── jwt.php               # Configuration JWT
 ├── database/                  # Base de données
 │   └── init-db.sql           # Schéma de base de données
 ├── src/                      # Code source
 │   ├── Controller/           # Contrôleurs
 │   ├── Service/             # Services métier
+│   │   ├── ServiceAuthService.php     # Authentification API Key
+│   │   └── *Service.php              # Autres services
 │   ├── Repository/          # Couche d'accès aux données
+│   │   ├── ServiceRepository.php     # Gestion services API
+│   │   └── *Repository.php          # Autres repositories
 │   ├── Middleware/          # Middlewares
+│   │   ├── ApiKeyMiddleware.php      # Authentification API Key
+│   │   └── *Middleware.php          # Autres middlewares
 │   ├── Entity/             # Entités
+│   │   ├── Service.php              # Entité service API
+│   │   └── *Entity.php             # Autres entités
 │   └── Exception/          # Exceptions personnalisées
+│       ├── AuthenticationException.php
+│       ├── AuthorizationException.php
+│       ├── ServiceNotFoundException.php
+│       └── *.php                    # Autres exceptions
 ├── tests/                   # Tests
 │   ├── verify-database.sh   # Health check rapide de la DB
 │   ├── test-database.php    # Validation structure + connexion
@@ -41,7 +53,9 @@ my-auth/
 ├── vendor/                 # Dépendances Composer
 ├── docker-compose.yml     # Configuration Docker
 ├── composer.json          # Dépendances PHP
-└── README.md             # Ce fichier
+├── README.md             # Ce fichier
+├── README-STEP3.md       # Documentation Authentification API Key
+└── phpstan.neon          # Configuration analyse statique
 ```
 
 ## 🛠️ Installation et Configuration
@@ -269,8 +283,24 @@ php tests/test-database.php          # Diagnostic détaillé
 # Analyse statique (niveau max)
 ./vendor/bin/phpstan analyse src/ --level=max
 
+# Validation complète (format + analyse + tests)
+composer run quality
+
 # Couverture de tests
 ./vendor/bin/phpunit --coverage-html coverage/
+```
+
+### Commandes Spécifiques Étape 3
+
+```bash
+# Tests API Key uniquement
+vendor/bin/phpunit src/Entity/ServiceTest.php
+vendor/bin/phpunit src/Repository/ServiceRepositoryTest.php
+vendor/bin/phpunit src/Service/ServiceAuthServiceTest.php
+vendor/bin/phpunit src/Middleware/ApiKeyMiddlewareTest.php
+
+# Vérification configuration services
+php -c "echo json_decode(file_get_contents('config/services.json'), true) ? 'Valid JSON' : 'Invalid JSON';"
 ```
 
 ## 🛡️ Sécurité
@@ -291,6 +321,47 @@ php tests/test-database.php          # Diagnostic détaillé
 - **Couverture de tests** : Objectif > 95%
 - **Documentation** : Commentaires sur toutes les tables et colonnes
 
+## 🔐 Authentification API Key
+
+Le système inclut un mécanisme complet d'authentification par clé API pour les services externes.
+
+### Configuration Rapide
+
+1. **Configurer les services autorisés** dans `config/services.json`
+2. **Appliquer le middleware** sur vos routes protégées
+3. **Utiliser l'API** avec votre clé dans les headers
+
+```php
+// Application du middleware
+$app->add(ApiKeyMiddleware::class);
+
+// Ou pour des routes spécifiques
+$app->group('/api', function (RouteCollectorProxy $group) {
+    $group->get('/users', [UserController::class, 'list']);
+})->add(ApiKeyMiddleware::class);
+```
+
+### Utilisation
+
+```bash
+# Authentification via header (recommandé)
+curl -H "X-API-Key: votre-cle-api" https://api.example.com/protected
+
+# Authentification via Bearer token
+curl -H "Authorization: Bearer votre-cle-api" https://api.example.com/protected
+```
+
+### Fonctionnalités
+
+- ✅ **Multiple méthodes** d'authentification (header, bearer, query)
+- ✅ **Validation des origines** avec support wildcards
+- ✅ **Routes publiques** configurables
+- ✅ **Tokens temporaires** pour cas spéciaux
+- ✅ **Gestion d'erreurs** avec codes HTTP appropriés
+- ✅ **Tests complets** et documentation détaillée
+
+**📖 Documentation complète** : [README-STEP3.md](README-STEP3.md)
+
 ## 📈 Roadmap
 
 ### ✅ Étape 1 - Base de Données (Terminée)
@@ -299,9 +370,22 @@ php tests/test-database.php          # Diagnostic détaillé
 - [x] Tests de vérification
 - [x] Documentation
 
+### ✅ Étape 2 - Infrastructure (Terminée)
+- [x] Configuration PHP-DI
+- [x] Autoloader Composer
+- [x] Structure des services
+- [x] Middleware de base
+
+### ✅ Étape 3 - Authentification Services (Terminée)
+- [x] Système d'API Key complet
+- [x] Middleware PSR-15 pour authentification
+- [x] Validation des origines (CORS)
+- [x] Configuration JSON des services
+- [x] Tests unitaires complets
+- [x] Documentation détaillée
+- [x] **Voir [README-STEP3.md](README-STEP3.md) pour les détails**
+
 ### 🔄 Étapes Suivantes
-- [ ] Étape 2 - Infrastructure (Configuration DI, autoloader)
-- [ ] Étape 3 - Authentification Services (API Key)
 - [ ] Étape 4 - Gestion Utilisateurs (Register, Email verification)
 - [ ] Étape 5 - Authentification JWT (Login, Middleware)
 - [ ] Étape 6 - Finalisation (Documentation, Déploiement)
@@ -319,4 +403,6 @@ MIT License - Voir le fichier LICENSE pour plus de détails.
 
 ---
 
-**Status** : ⚠️ En développement - Étape 1 terminée
+**Status** : 🚀 En développement actif - Étapes 1, 2 et 3 terminées
+
+**Dernière mise à jour** : 14 août 2025 - Authentification API Key opérationnelle

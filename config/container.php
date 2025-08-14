@@ -49,6 +49,27 @@ return function (ContainerBuilder $containerBuilder): void {
         },
         
         // =================================================================
+        // MIDDLEWARES
+        // =================================================================
+        
+        'MyAuth\Middleware\CorsMiddleware' => function (): \MyAuth\Middleware\CorsMiddleware {
+            // Utiliser la factory appropriée selon l'environnement
+            $environment = $_ENV['APP_ENV'] ?? 'development';
+            
+            if ($environment === 'production') {
+                // En production, utiliser les origines spécifiques depuis la config
+                $allowedOrigins = !empty($_ENV['CORS_ALLOWED_ORIGINS']) 
+                    ? explode(',', $_ENV['CORS_ALLOWED_ORIGINS'])
+                    : ['https://myapp.com']; // Fallback sécurisé
+                    
+                return \MyAuth\Middleware\CorsMiddleware::forProduction($allowedOrigins);
+            } else {
+                // En développement, utiliser la factory depuis l'environnement
+                return \MyAuth\Middleware\CorsMiddleware::fromEnvironment();
+            }
+        },
+        
+        // =================================================================
         // BASE DE DONNÉES
         // =================================================================
         
@@ -115,9 +136,6 @@ return function (ContainerBuilder $containerBuilder): void {
     // Configuration avancée du container
     
     // Activer l'autowiring pour la résolution automatique
-    $containerBuilder->useAutowiring(true);
-    
-    // Activer l'autowiring
     $containerBuilder->useAutowiring(true);
     
     // Configuration de la compilation en production

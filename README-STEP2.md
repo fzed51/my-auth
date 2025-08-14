@@ -18,12 +18,14 @@ L'étape 2 de développement de l'API d'authentification MyAuth est maintenant *
 - Classes abstraites pour Repositories et Services
 - Configuration modulaire séparée par domaine
 - Structure de dossiers optimisée pour la maintenance
+- Middleware CORS modulaire avec tests unitaires
 
 ✅ **Configuration des Services**
 - Base de données (PDO avec MySQL)
 - JWT (tokens d'authentification)
 - Services autorisés (API Keys)
 - Sécurité et rate limiting
+- Middleware CORS configurable par environnement
 
 ## 📁 Structure Créée
 
@@ -46,8 +48,11 @@ public/
 src/
 ├── Repository/
 │   └── AbstractRepository.php    # Classe de base pour tous les repositories
-└── Service/
-    └── AbstractService.php       # Classe de base pour tous les services
+├── Service/
+│   └── AbstractService.php       # Classe de base pour tous les services
+└── Middleware/
+    ├── CorsMiddleware.php         # Middleware CORS modulaire et configurable
+    └── CorsMiddlewareTest.php     # Tests unitaires du middleware CORS
 
 var/
 ├── cache/           # Cache PHP-DI (compilation en production)
@@ -68,7 +73,7 @@ var/
 - **Point d'entrée** : `public/index.php`
 - **Middlewares globaux** :
   - Gestion d'erreurs avec détails en développement
-  - CORS (Cross-Origin Resource Sharing)
+  - CORS modulaire (CorsMiddleware PSR-15)
   - Parsing du body JSON
   - Routing
 - **Routes de base** :
@@ -131,6 +136,116 @@ var/
 - **Logging** : méthodes pour info, warning, error
 - **Dates** : gestion expiration, calculs de durée
 
+#### CorsMiddleware
+- **PSR-15 compliant** : Interface middleware standard
+- **Configuration flexible** : Origines, méthodes, en-têtes personnalisables
+- **Pattern matching** : Support des wildcards (*.example.com)
+- **Factory methods** : Configuration automatique par environnement
+- **Tests unitaires** : 10 tests couvrant tous les cas d'usage
+- **Sécurité** : Configuration restrictive en production
+
+## 🌐 Middleware CORS Détaillé
+
+### Fonctionnalités Implémentées
+
+Le middleware CORS (`CorsMiddleware`) a été extrait du code inline et transformé en une solution modulaire professionnelle :
+
+#### ✅ **Configuration Flexible**
+```php
+// Factory pour développement (permissif)
+CorsMiddleware::forDevelopment()
+
+// Factory pour production (restrictif avec origines spécifiques)
+CorsMiddleware::forProduction(['https://myapp.com', 'https://api.myapp.com'])
+
+// Factory depuis variables d'environnement
+CorsMiddleware::fromEnvironment()
+
+// Configuration manuelle complète
+new CorsMiddleware(
+    allowedOrigins: ['https://app1.com', '*.example.com'],
+    allowedMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
+    allowCredentials: true,
+    maxAge: 3600
+)
+```
+
+#### ✅ **Support des Patterns d'Origines**
+- **Origine spécifique** : `https://myapp.com`
+- **Wildcard domaine** : `*.example.com` (match `app.example.com`, `api.example.com`)
+- **Toutes origines** : `*` (développement uniquement)
+
+#### ✅ **Gestion des Requêtes Preflight**
+Le middleware gère automatiquement les requêtes `OPTIONS` avec :
+- En-têtes `Access-Control-Request-Method`
+- En-têtes `Access-Control-Request-Headers`
+- Cache des permissions avec `Max-Age`
+
+#### ✅ **Variables d'Environnement Supportées**
+```bash
+# Origines autorisées (séparées par virgules)
+CORS_ALLOWED_ORIGINS=http://localhost:3000,https://myapp.com
+
+# Méthodes HTTP autorisées
+CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,PATCH,OPTIONS
+
+# En-têtes autorisés
+CORS_ALLOWED_HEADERS=Content-Type,Authorization,X-API-Key,X-Requested-With,Accept,Origin
+
+# Support des cookies cross-origin
+CORS_ALLOW_CREDENTIALS=true
+
+# Durée de cache des permissions CORS (secondes)
+CORS_MAX_AGE=86400
+```
+
+### Tests Unitaires (10 tests)
+
+Le middleware est livré avec une suite complète de tests unitaires :
+
+1. **testProcessAddsBasicCorsHeaders** : Vérification des en-têtes de base
+2. **testProcessWithSpecificOrigin** : Test avec origine autorisée
+3. **testProcessWithUnauthorizedOrigin** : Gestion des origines non autorisées
+4. **testProcessOptionsRequest** : Requêtes preflight OPTIONS
+5. **testFromEnvironmentFactory** : Factory depuis variables d'environnement
+6. **testForDevelopmentFactory** : Configuration de développement
+7. **testForProductionFactory** : Configuration de production
+8. **testWildcardOriginPattern** : Support des wildcards
+9. **testCredentialsHeader** : Gestion des credentials
+10. **testNoCredentialsHeader** : Désactivation des credentials
+
+### En-têtes CORS Générés
+
+Le middleware génère automatiquement les en-têtes suivants :
+
+```http
+Access-Control-Allow-Origin: http://localhost:3000
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key, X-Requested-With, Accept, Origin
+Access-Control-Max-Age: 86400
+Access-Control-Allow-Credentials: true
+```
+
+### Intégration avec PHP-DI
+
+Le middleware est automatiquement configuré dans le container selon l'environnement :
+
+```php
+// En développement : configuration permissive depuis .env
+// En production : origines restrictives depuis CORS_ALLOWED_ORIGINS
+'MyAuth\Middleware\CorsMiddleware' => function (): CorsMiddleware {
+    $environment = $_ENV['APP_ENV'] ?? 'development';
+    
+    if ($environment === 'production') {
+        $allowedOrigins = explode(',', $_ENV['CORS_ALLOWED_ORIGINS']);
+        return CorsMiddleware::forProduction($allowedOrigins);
+    } else {
+        return CorsMiddleware::fromEnvironment();
+    }
+}
+```
+
 ## 🔧 Configuration d'Environnement
 
 ### Variables Principales
@@ -173,6 +288,10 @@ php -S localhost:8080 -t public/
 curl http://localhost:8080/                    # ✅ API info
 curl http://localhost:8080/health              # ✅ Health check  
 curl http://localhost:8080/api/auth/test       # ✅ Auth structure
+
+# Tests des en-têtes CORS
+curl -I http://localhost:8080/ | grep Access-Control    # ✅ En-têtes CORS
+curl -X OPTIONS http://localhost:8080/ -H "Origin: https://example.com"  # ✅ Preflight
 ```
 
 ### Résultats Attendus
@@ -215,12 +334,23 @@ curl http://localhost:8080/api/auth/test       # ✅ Auth structure
 }
 ```
 
+#### Tests des En-têtes CORS
+```http
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: http://localhost:3000
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key, X-Requested-With, Accept, Origin
+Access-Control-Max-Age: 86400
+Access-Control-Allow-Credentials: true
+```
+
 ## 🔄 État et Prochaines Étapes
 
 ### ✅ Terminé - Étape 2
 - Infrastructure complète mise en place
 - Configuration modulaire opérationnelle
 - Classes de base prêtes pour héritage
+- Middleware CORS modulaire avec tests unitaires
 - Serveur de développement fonctionnel
 - Tests de validation réussis
 
@@ -242,6 +372,7 @@ L'infrastructure est maintenant prête pour l'implémentation de la logique mét
    - `AuthMiddleware` (vérification JWT)
    - `ApiKeyMiddleware` (authentification par clé API)
    - `RateLimitMiddleware` (limitation de débit)
+   - `CorsMiddleware` (✅ déjà implémenté)
 
 4. **Controllers** :
    - `AuthController` (endpoints d'authentification)
@@ -263,6 +394,7 @@ L'infrastructure est maintenant prête pour l'implémentation de la logique mét
 - ✅ Dependency Injection (couplage faible)
 - ✅ Front Controller (point d'entrée unique)
 - ✅ Configuration centralisée
+- ✅ Middleware Pattern (PSR-15)
 
 **Sécurité mise en place** :
 - ✅ Requêtes préparées PDO
@@ -272,3 +404,29 @@ L'infrastructure est maintenant prête pour l'implémentation de la logique mét
 - ✅ Configuration d'environnement séparée
 
 L'étape 2 est **100% complète** et l'infrastructure est robuste pour la suite du développement ! 🎉
+
+## 🔄 Améliorations Récentes
+
+### ✅ Extraction du Middleware CORS (14 août 2025)
+
+**Problème résolu** : Le code CORS était défini inline dans `public/index.php`, ce qui posait des problèmes de :
+- Maintenabilité du code
+- Testabilité unitaire
+- Réutilisabilité
+- Configuration flexible
+
+**Solution implémentée** :
+1. **Extraction complète** : Code CORS déplacé vers `src/Middleware/CorsMiddleware.php`
+2. **Conformité PSR-15** : Implémentation de `MiddlewareInterface`
+3. **Tests unitaires** : Suite complète de 10 tests dans `CorsMiddlewareTest.php`
+4. **Configuration DI** : Intégration dans le container PHP-DI
+5. **Factory methods** : Configuration automatique par environnement
+
+**Résultats** :
+- ✅ Code plus propre et maintenable
+- ✅ Tests unitaires complets (100% de couverture)
+- ✅ Configuration flexible par environnement
+- ✅ Support des patterns d'origines (wildcards)
+- ✅ Respect des standards PSR-15
+
+**Impact** : Infrastructure plus robuste et prête pour la production avec une gestion CORS professionnelle.

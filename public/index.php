@@ -11,6 +11,16 @@ declare(strict_types=1);
  * @package MyAuth
  */
 
+// Suppression des warnings de dépréciation PHP-DI (doit être fait en premier)
+// Ces warnings ne sont pas critiques et viennent de la version de PHP-DI
+$isProduction = ($_ENV['APP_ENV'] ?? 'development') === 'production';
+if (!$isProduction) {
+    // Masquer les warnings de dépréciation tout en gardant les autres erreurs
+    error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+}
+
 use DI\ContainerBuilder;
 use Slim\Factory\AppFactory;
 use Slim\Factory\ServerRequestCreatorFactory;
@@ -18,6 +28,13 @@ use Dotenv\Dotenv;
 
 // Autoloader Composer
 require_once __DIR__ . '/../vendor/autoload.php';
+
+// Vérification de la version minimale de PHP requise
+if (version_compare(PHP_VERSION, '8.1.0', '<')) {
+    header('Content-Type: text/plain; charset=utf-8', true, 500);
+    echo "Erreur : PHP 8.1.0 ou supérieur est requis. Version actuelle : " . PHP_VERSION;
+    exit(1);
+}
 
 // Chargement des variables d'environnement
 if (file_exists(__DIR__ . '/../.env')) {
@@ -60,15 +77,8 @@ $app->setBasePath('');
 $errorMiddleware = $app->addErrorMiddleware($displayErrorDetails, $logErrors, $logErrorDetails);
 
 // Middleware CORS (Cross-Origin Resource Sharing)
-$app->add(function ($request, $handler) {
-    $response = $handler->handle($request);
-    
-    return $response
-        ->withHeader('Access-Control-Allow-Origin', '*')
-        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization, X-API-Key')
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-        ->withHeader('Access-Control-Allow-Credentials', 'true');
-});
+$corsMiddleware = $container->get('MyAuth\Middleware\CorsMiddleware');
+$app->add($corsMiddleware);
 
 // Middleware pour les requêtes OPTIONS (preflight CORS)
 $app->options('/{routes:.+}', function ($request, $response) {

@@ -11,8 +11,6 @@ declare(strict_types=1);
  * @package MyAuth\Config
  */
 
-use InvalidArgumentException;
-
 return [
     'database' => [
         // Configuration principale

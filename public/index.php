@@ -80,6 +80,11 @@ $errorMiddleware = $app->addErrorMiddleware($displayErrorDetails, $logErrors, $l
 $corsMiddleware = $container->get('MyAuth\Middleware\CorsMiddleware');
 $app->add($corsMiddleware);
 
+// Middleware d'authentification par API Key
+// Note: Les routes publiques sont configurées dans le container
+$apiKeyMiddleware = $container->get('MyAuth\Middleware\ApiKeyMiddleware');
+$app->add($apiKeyMiddleware);
+
 // Middleware pour les requêtes OPTIONS (preflight CORS)
 $app->options('/{routes:.+}', function ($request, $response) {
     return $response;
@@ -141,6 +146,48 @@ $app->group('/api/auth', function ($group) {
                 'POST /api/auth/login' => 'User login (coming soon)',
                 'GET /api/auth/verify-email/{token}' => 'Email verification (coming soon)',
             ],
+        ];
+        
+        $response->getBody()->write(json_encode($data, JSON_PRETTY_PRINT));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+});
+
+// Groupe de routes protégées pour tester l'authentification API Key
+$app->group('/api/secure', function ($group) {
+    
+    // Route de test pour vérifier l'authentification par API Key
+    $group->get('/test', function ($request, $response) {
+        // Récupération du service authentifié depuis le middleware
+        $authenticatedService = \MyAuth\Middleware\ApiKeyMiddleware::getAuthenticatedService($request);
+        $serviceId = \MyAuth\Middleware\ApiKeyMiddleware::getServiceId($request);
+        $serviceName = \MyAuth\Middleware\ApiKeyMiddleware::getServiceName($request);
+        
+        $data = [
+            'message' => 'API Key authentication successful',
+            'authenticated_service' => [
+                'id' => $serviceId,
+                'name' => $serviceName,
+                'description' => $authenticatedService?->getDescription(),
+                'rate_limit_per_minute' => $authenticatedService?->getRateLimitPerMinute(),
+                'allowed_origins' => $authenticatedService?->getAllowedOrigins(),
+            ],
+            'timestamp' => date('c'),
+        ];
+        
+        $response->getBody()->write(json_encode($data, JSON_PRETTY_PRINT));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+    
+    // Route pour obtenir les statistiques des services
+    $group->get('/services/stats', function ($request, $response) use ($container) {
+        $serviceAuthService = $container->get('MyAuth\Service\ServiceAuthService');
+        $stats = $serviceAuthService->getServicesStatistics();
+        
+        $data = [
+            'message' => 'Services statistics',
+            'statistics' => $stats,
+            'timestamp' => date('c'),
         ];
         
         $response->getBody()->write(json_encode($data, JSON_PRETTY_PRINT));

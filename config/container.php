@@ -69,6 +69,17 @@ return function (ContainerBuilder $containerBuilder): void {
             }
         },
         
+        'MyAuth\Middleware\ApiKeyMiddleware' => function (ContainerInterface $container): \MyAuth\Middleware\ApiKeyMiddleware {
+            $serviceAuthService = $container->get('MyAuth\Service\ServiceAuthService');
+            $responseFactory = $container->get('Psr\Http\Message\ResponseFactoryInterface');
+            
+            // Configuration des routes publiques par défaut
+            return \MyAuth\Middleware\ApiKeyMiddleware::withDefaultPublicRoutes(
+                $serviceAuthService,
+                $responseFactory
+            );
+        },
+        
         // =================================================================
         // BASE DE DONNÉES
         // =================================================================
@@ -107,15 +118,19 @@ return function (ContainerBuilder $containerBuilder): void {
         // REPOSITORIES
         // =================================================================
         
-        // Les repositories seront automatiquement résolus via l'autoloader
-        // grâce à l'autowiring de PHP-DI
+        'MyAuth\Repository\ServiceRepository' => function (ContainerInterface $container): \MyAuth\Repository\ServiceRepository {
+            $servicesConfigPath = __DIR__ . '/services.json';
+            return new \MyAuth\Repository\ServiceRepository($servicesConfigPath);
+        },
         
         // =================================================================
         // SERVICES
         // =================================================================
         
-        // Les services seront automatiquement résolus via l'autoloader
-        // grâce à l'autowiring de PHP-DI
+        'MyAuth\Service\ServiceAuthService' => function (ContainerInterface $container): \MyAuth\Service\ServiceAuthService {
+            $serviceRepository = $container->get('MyAuth\Repository\ServiceRepository');
+            return new \MyAuth\Service\ServiceAuthService($serviceRepository);
+        },
         
         // =================================================================
         // MIDDLEWARES
@@ -130,6 +145,14 @@ return function (ContainerBuilder $containerBuilder): void {
         
         // Les contrôleurs seront automatiquement résolus via l'autoloader
         // grâce à l'autowiring de PHP-DI
+        
+        // =================================================================
+        // HTTP FACTORIES
+        // =================================================================
+        
+        'Psr\Http\Message\ResponseFactoryInterface' => function (): \Psr\Http\Message\ResponseFactoryInterface {
+            return new \Slim\Psr7\Factory\ResponseFactory();
+        },
         
     ]);
     

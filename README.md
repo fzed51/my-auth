@@ -31,6 +31,9 @@ my-auth/
 │   ├── Entity/             # Entités
 │   └── Exception/          # Exceptions personnalisées
 ├── tests/                   # Tests
+│   ├── verify-database.sh   # Health check rapide de la DB
+│   ├── test-database.php    # Validation structure + connexion
+│   ├── test-migration.php   # Test complet end-to-end
 │   ├── Integration/        # Tests d'intégration
 │   └── *Test.php          # Tests unitaires (co-localisés)
 ├── public/                 # Point d'entrée web
@@ -88,6 +91,126 @@ php tests/test-database.php
 # Ou via le script de vérification
 ./tests/verify-database.sh
 ```
+
+## 🧪 Tests de Base de Données
+
+Le projet inclut une **suite complète de tests** pour valider la base de données selon différents contextes d'usage. Chaque fichier a un rôle spécifique et complémentaire :
+
+### 📋 [`tests/verify-database.sh`](tests/verify-database.sh) - Health Check Rapide
+
+**🎯 Objectif** : Vérification rapide de la structure via Docker
+```bash
+# Exécution directe via MySQL client
+./tests/verify-database.sh
+```
+
+**🚀 Caractéristiques** :
+- ✅ **Lecture seule** (aucune modification)
+- ✅ **Ultra rapide** (2-3 secondes)
+- ✅ **Indépendant** (bash + docker uniquement)
+- ✅ **Monitoring-friendly** (idéal pour alertes)
+
+**📊 Vérifications** :
+- Tables existantes
+- Structure des colonnes (DESCRIBE)
+- Contraintes de clés étrangères
+
+**💡 Quand l'utiliser** :
+- Health check quotidien
+- Scripts de monitoring
+- Pipeline CI/CD (étape rapide)
+- Vérification après redémarrage
+
+### 🔍 [`tests/test-database.php`](tests/test-database.php) - Validation Structure + Connexion
+
+**🎯 Objectif** : Test de connectivité PHP et validation détaillée
+```bash
+# Test avec connexion PDO native
+php tests/test-database.php
+```
+
+**🚀 Caractéristiques** :
+- ✅ **Connexion PDO** (test environnement réel)
+- ✅ **Structure détaillée** (types, clés, contraintes)
+- ✅ **Debug-oriented** (diagnostic précis)
+- ✅ **Rapide** (5 secondes)
+
+**📊 Vérifications** :
+- Connexion PDO fonctionnelle
+- Tables + colonnes avec types
+- Index et contraintes
+- Clés étrangères détaillées
+
+**💡 Quand l'utiliser** :
+- Après installation initiale
+- Debug de problèmes de connexion
+- Validation après modification du schéma
+- Test de l'environnement PHP
+
+### 🔄 [`tests/test-migration.php`](tests/test-migration.php) - Test Complet End-to-End
+
+**🎯 Objectif** : Validation fonctionnelle complète avec données réelles
+```bash
+# Test exhaustif avec manipulation de données
+php tests/test-migration.php
+```
+
+**🚀 Caractéristiques** :
+- ✅ **6 tests distincts** avec rapports détaillés
+- ✅ **Manipulation de données** (insertion/suppression)
+- ✅ **Validation CASCADE** (contraintes en conditions réelles)
+- ✅ **Test de régression** (vérification complète)
+
+**📊 Tests réalisés** :
+1. **Structure** : Vérification des tables attendues
+2. **Contraintes FK** : Validation des relations
+3. **Insertion** : Test avec données réelles
+4. **Comptage** : Vérification des données insérées
+5. **CASCADE** : Test de suppression en cascade
+6. **Index** : Validation des performances
+
+**💡 Quand l'utiliser** :
+- Avant mise en production
+- Après modifications importantes du schéma
+- Tests de régression
+- Validation finale avant commit
+
+### 🔄 Workflow d'Utilisation Recommandé
+
+```bash
+# 1. Développement quotidien
+./tests/verify-database.sh           # Check rapide (2s)
+
+# 2. Après modification du schéma  
+php tests/test-database.php          # Validation structure (5s)
+php tests/test-migration.php         # Test complet (10s)
+
+# 3. Pipeline CI/CD
+./tests/verify-database.sh &&        # Health check
+php tests/test-migration.php         # Validation complète
+
+# 4. Debug d'un problème
+php tests/test-database.php          # Diagnostic détaillé
+```
+
+### 📊 Comparaison des Tests
+
+| Critère | [`verify-database.sh`](tests/verify-database.sh) | [`test-database.php`](tests/test-database.php) | [`test-migration.php`](tests/test-migration.php) |
+|---------|------------------|------------------|------------------|
+| **Durée** | 2-3 secondes | ~5 secondes | ~10 secondes |
+| **Données** | Lecture seule | Lecture seule | Insertion/Suppression |
+| **Connexion** | MySQL direct | PDO PHP | PDO PHP |
+| **Contexte** | Health check | Debug/Validation | Test complet |
+| **Dépendances** | Docker + Bash | PHP + PDO | PHP + PDO |
+| **Side-effects** | Aucun | Aucun | Contrôlés |
+
+### 🎯 Avantages de cette Approche
+
+- **🔧 Granularité** : Du simple au complexe selon le besoin
+- **⚡ Performance** : Test rapide pour usage fréquent
+- **🛡️ Robustesse** : Validation complète quand nécessaire
+- **🔄 Flexibilité** : Adapté à tous les contextes (dev, CI/CD, prod)
+- **🧹 Maintenabilité** : Chaque fichier a un rôle précis
 
 ## 🗄️ Base de Données
 

@@ -2,21 +2,23 @@
 
 ## Instructions Générales Permanentes
 
-Vous êtes un automate de programmation expert chargé de créer un service d'authentification robuste et sécurisé. Ces instructions doivent être appliquées à chaque étape du développement :
+Vous êtes chargé de créer un service d'authentification robuste et sécurisé. Ces instructions doivent être appliquées à chaque étape du développement :
 
 ### Technologies et Standards
 - **Gestionnaire de packet** : composer
 - **Framework** : Slim Framework 4
-- **Injection de dépendances** : PHP-DI 5
+- **Injection de dépendances** : PHP-DI
 - **Tests** : PhpUnit pour tous les tests unitaires
 - **Qualité de code** : Validation PhpCs et PhpStan (niveau maximum)
 - **Base de données** : MySQL avec PDO et requêtes préparées
 - **Sécurité** : Protection obligatoire contre les injections SQL
 
 ### Documentation
-- Créer/mettre à jour un fichier `README.md` pour chaque étape
-- Documenter les choix techniques et l'architecture
-- Inclure les instructions d'installation et d'utilisation
+  - Créer/mettre à jour un fichier `README.md` pour chaque étape.
+    - Documenter les choix techniques et l'architecture
+    - Inclure les instructions d'installation et d'utilisation
+  -  Créer/mettre à jour un fichier `README-STEP<n>.md` pour chaque étape.
+    - Documenter ce qui a été fait et ce qui reste à faire.
 
 ## Architecture du Projet
 
@@ -38,13 +40,14 @@ Vous êtes un automate de programmation expert chargé de créer un service d'au
 │   ├── Entity/
 │   └── Exception/
 ├── tests/
-│   ├── Unit/
 │   └── Integration/
 ├── public/
 │   └── index.php
 ├── composer.json
 └── README.md
 ```
+
+Les tests unitaire seront écrit dans le même dossier que le fichier testé : on trouve dans le même dossier le fichier `monService.php` et `monServiceTest.php`.
 
 ## Fonctionnalités à Implémenter
 
@@ -57,9 +60,12 @@ Vous êtes un automate de programmation expert chargé de créer un service d'au
 - `email_verifications` : Tokens de vérification d'email
 - `jwt_blacklist` : Tokens JWT révoqués (optionnel pour logout)
 
+**Rappel** :
+- Les service ne sont pas enregistré en base de donnée.
+
 **Implémentation technique** :
 - Fichier `database/init-db.sql`
-- Clés primaires, index et contraintes de sécurité
+- Clés primaires, les clés primaires seront des uuid, index et contraintes de sécurité
 - Champs de timestamps (created_at, updated_at)
 - Hashage sécurisé des mots de passe (PASSWORD_DEFAULT)
 
@@ -175,6 +181,14 @@ Vous êtes un automate de programmation expert chargé de créer un service d'au
 - Liste des services autorisés
 - API keys associées
 - Métadonnées des services
+- La structure d'un service est :
+    ```
+    id: string (UUID),
+    name: string,
+    api_key : string,
+    description: string,
+    is_active: boolean,
+    ```
 
 ## Sécurité Obligatoire
 
@@ -182,10 +196,9 @@ Vous êtes un automate de programmation expert chargé de créer un service d'au
 1. **Injections SQL** : Requêtes PDO préparées exclusivement
 2. **Mots de passe** : Hashage avec `password_hash()` et `PASSWORD_DEFAULT`
 3. **JWT** : Signature cryptographique et vérification d'expiration
-4. **API Keys** : Génération aléatoire sécurisée et stockage hashé
-5. **Rate Limiting** : Protection contre les attaques par force brute
-6. **CORS** : Configuration appropriée pour les origines autorisées
-7. **HTTPS** : Headers de sécurité appropriés
+4. **Rate Limiting** : Protection contre les attaques par force brute
+5. **CORS** : Configuration appropriée pour les origines autorisées
+6. **HTTPS** : Headers de sécurité appropriés
 
 ### Validation des Données
 - Validation stricte des formats email
@@ -212,26 +225,35 @@ Vous êtes un automate de programmation expert chargé de créer un service d'au
 - [ ] `database/init-db.sql` complet
 - [ ] Tests de création/migration
 - [ ] README avec instructions de setup
+- [ ] README-STEP1 Action effectué et rest à faire
 
 ### Étape 2 : Infrastructure
 - [ ] Configuration complète (DI, DB, JWT)
 - [ ] Structure des dossiers
 - [ ] Autoloader et dépendances
+- [ ] Validation PhpCs et PhpStan
+- [ ] README-STEP2 Action effectué et rest à faire
 
 ### Étape 3 : Authentification Services
 - [ ] Middleware API Key
 - [ ] Repository et Service
 - [ ] Tests unitaires complets
+- [ ] Validation PhpCs et PhpStan
+- [ ] README-STEP3 Action effectué et rest à faire
 
 ### Étape 4 : Gestion Utilisateurs
 - [ ] Création de compte
 - [ ] Vérification email
 - [ ] Tests complets
+- [ ] Validation PhpCs et PhpStan
+- [ ] README-STEP4 Action effectué et rest à faire
 
 ### Étape 5 : Authentification JWT
 - [ ] Login et génération JWT
 - [ ] Middleware JWT
 - [ ] Tests de sécurité
+- [ ] Validation PhpCs et PhpStan
+- [ ] README-STEP5 Action effectué et rest à faire
 
 ### Étape 6 : Finalisation
 - [ ] Validation PhpCs et PhpStan

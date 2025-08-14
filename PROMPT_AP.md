@@ -232,30 +232,39 @@ Les tests unitaire seront écrit dans le même dossier que le fichier testé : o
 - [ ] Structure des dossiers
 - [ ] Autoloader et dépendances
 - [ ] Validation PhpCs et PhpStan
-- [ ] README-STEP2 Action effectué et rest à faire
+- [ ] créer le README-STEP2 avec les Actions effectué et le reste à faire
 
 ### Étape 3 : Authentification Services
 - [ ] Middleware API Key
 - [ ] Repository et Service
 - [ ] Tests unitaires complets
 - [ ] Validation PhpCs et PhpStan
-- [ ] README-STEP3 Action effectué et rest à faire
+- [ ] créer le README-STEP3 avec les Actions effectué et le reste à faire
+
 
 ### Étape 4 : Gestion Utilisateurs
-- [ ] Création de compte
-- [ ] Vérification email
+- [ ] Création de compte (endpoint /account)
+- [ ] Vérification email (endpoint /account/valid-email/{token})
 - [ ] Tests complets
 - [ ] Validation PhpCs et PhpStan
-- [ ] README-STEP4 Action effectué et rest à faire
+- [ ] créer le README-STEP4 avec les Actions effectué et le reste à faire
 
 ### Étape 5 : Authentification JWT
 - [ ] Login et génération JWT
 - [ ] Middleware JWT
 - [ ] Tests de sécurité
 - [ ] Validation PhpCs et PhpStan
-- [ ] README-STEP5 Action effectué et rest à faire
+- [ ] créer le README-STEP5 avec les Actions effectué et le reste à faire
 
-### Étape 6 : Finalisation
+### Étape 6 : information du compte
+- [ ] récupérationdes information (/me)
+- [ ] Tests de sécurité
+- [ ] Validation PhpCs et PhpStan
+- [ ] créer le README-STEP6 avec les Actions effectué et le reste à faire
+
+
+
+### Étape 7 : Finalisation
 - [ ] Validation PhpCs et PhpStan
 - [ ] Documentation complète
 - [ ] Guide de déploiement

@@ -11,10 +11,10 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  * Middleware CORS (Cross-Origin Resource Sharing)
- * 
+ *
  * Ce middleware gère les en-têtes CORS pour permettre les requêtes
  * cross-origin depuis les applications front-end autorisées.
- * 
+ *
  * @package MyAuth\Middleware
  */
 class CorsMiddleware implements MiddlewareInterface
@@ -53,16 +53,16 @@ class CorsMiddleware implements MiddlewareInterface
         ServerRequestInterface $request,
         RequestHandlerInterface $handler
     ): ResponseInterface {
-        
+
         // Récupérer l'origine de la requête
         $origin = $request->getHeaderLine('Origin');
-        
+
         // Traiter la requête
         $response = $handler->handle($request);
-        
+
         // Ajouter les en-têtes CORS
         $response = $this->addCorsHeaders($response, $origin, $request);
-        
+
         return $response;
     }
 
@@ -74,36 +74,36 @@ class CorsMiddleware implements MiddlewareInterface
         string $origin,
         ServerRequestInterface $request
     ): ResponseInterface {
-        
+
         // Déterminer l'origine autorisée
         $allowedOrigin = $this->getAllowedOrigin($origin);
-        
+
         // En-têtes CORS de base
         $response = $response
             ->withHeader('Access-Control-Allow-Origin', $allowedOrigin)
             ->withHeader('Access-Control-Allow-Methods', implode(', ', $this->allowedMethods))
             ->withHeader('Access-Control-Allow-Headers', implode(', ', $this->allowedHeaders))
             ->withHeader('Access-Control-Max-Age', (string) $this->maxAge);
-        
+
         // Ajouter les credentials si autorisés
         if ($this->allowCredentials) {
             $response = $response->withHeader('Access-Control-Allow-Credentials', 'true');
         }
-        
+
         // En-têtes additionnels pour les requêtes préflight
         if ($request->getMethod() === 'OPTIONS') {
             $requestMethod = $request->getHeaderLine('Access-Control-Request-Method');
             $requestHeaders = $request->getHeaderLine('Access-Control-Request-Headers');
-            
+
             if ($requestMethod) {
                 $response = $response->withHeader('Access-Control-Allow-Methods', $requestMethod);
             }
-            
+
             if ($requestHeaders) {
                 $response = $response->withHeader('Access-Control-Allow-Headers', $requestHeaders);
             }
         }
-        
+
         return $response;
     }
 
@@ -116,19 +116,19 @@ class CorsMiddleware implements MiddlewareInterface
         if (in_array('*', $this->allowedOrigins, true)) {
             return '*';
         }
-        
+
         // Si l'origine spécifique est autorisée
         if (in_array($origin, $this->allowedOrigins, true)) {
             return $origin;
         }
-        
+
         // Vérification avec des patterns (ex: *.example.com)
         foreach ($this->allowedOrigins as $allowedOrigin) {
             if ($this->matchesOriginPattern($origin, $allowedOrigin)) {
                 return $origin; // Retourner l'origine réelle, pas le pattern
             }
         }
-        
+
         // Par défaut, retourner la première origine autorisée
         return $this->allowedOrigins[0] ?? '*';
     }
@@ -145,7 +145,7 @@ class CorsMiddleware implements MiddlewareInterface
             $regex = '/^' . str_replace('\*', '.*', $escapedPattern) . '$/i';
             return preg_match($regex, $origin) === 1;
         }
-        
+
         return false;
     }
 
@@ -156,7 +156,8 @@ class CorsMiddleware implements MiddlewareInterface
     {
         $allowedOrigins = $_ENV['CORS_ALLOWED_ORIGINS'] ?? '*';
         $allowedMethods = $_ENV['CORS_ALLOWED_METHODS'] ?? 'GET,POST,PUT,DELETE,PATCH,OPTIONS';
-        $allowedHeaders = $_ENV['CORS_ALLOWED_HEADERS'] ?? 'Content-Type,Authorization,X-API-Key,X-Requested-With,Accept,Origin';
+        $allowedHeaders = $_ENV['CORS_ALLOWED_HEADERS'] ??
+            'Content-Type,Authorization,X-API-Key,X-Requested-With,Accept,Origin';
         $allowCredentials = filter_var($_ENV['CORS_ALLOW_CREDENTIALS'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $maxAge = (int) ($_ENV['CORS_MAX_AGE'] ?? 86400);
 

@@ -10,13 +10,13 @@ use InvalidArgumentException;
 
 /**
  * Classe de base abstraite pour tous les repositories
- * 
+ *
  * Fournit les fonctionnalités communes pour l'accès aux données :
  * - Gestion de la connexion PDO
  * - Méthodes de base pour les opérations CRUD
  * - Gestion des erreurs et logging
  * - Validation des paramètres
- * 
+ *
  * @package MyAuth\Repository
  */
 abstract class AbstractRepository
@@ -57,7 +57,14 @@ abstract class AbstractRepository
         $stmt->execute();
 
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result ?: null;
+
+        if ($result === false) {
+            return null;
+        }
+
+        // PHPStan: $result est maintenant array<string, mixed>
+        assert(is_array($result));
+        return $result;
     }
 
     /**
@@ -71,7 +78,7 @@ abstract class AbstractRepository
 
         $sql = "SELECT * FROM {$this->tableName} {$whereClause} {$orderClause} {$limitClause}";
         $stmt = $this->pdo->prepare($sql);
-        
+
         $this->bindCriteriaValues($stmt, $criteria);
         $stmt->execute();
 
@@ -102,7 +109,7 @@ abstract class AbstractRepository
     {
         $whereClause = $this->buildWhereClause($criteria);
         $sql = "SELECT COUNT(*) FROM {$this->tableName} {$whereClause}";
-        
+
         $stmt = $this->pdo->prepare($sql);
         $this->bindCriteriaValues($stmt, $criteria);
         $stmt->execute();
@@ -162,7 +169,7 @@ abstract class AbstractRepository
     {
         $setClause = $this->buildSetClause($data);
         $whereClause = $this->buildWhereClause($criteria);
-        
+
         $sql = "UPDATE {$this->tableName} SET {$setClause} {$whereClause}";
 
         $stmt = $this->pdo->prepare($sql);
@@ -206,11 +213,11 @@ abstract class AbstractRepository
     protected function query(string $sql, array $parameters = []): PDOStatement
     {
         $stmt = $this->pdo->prepare($sql);
-        
+
         foreach ($parameters as $key => $value) {
             $stmt->bindValue($key, $value, $this->getPdoType($value));
         }
-        
+
         $stmt->execute();
         return $stmt;
     }
@@ -318,7 +325,7 @@ abstract class AbstractRepository
     /**
      * Détermine le type PDO approprié pour une valeur
      */
-    private function getPdoType($value): int
+    private function getPdoType(mixed $value): int
     {
         return match (gettype($value)) {
             'boolean' => PDO::PARAM_BOOL,

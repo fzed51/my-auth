@@ -3,5 +3,5 @@ parameters:
     paths:
         - src
     ignoreErrors:
-        # Add specific ignores if needed
-    checkMissingIterableValueType: false
+        -
+            identifier: missingType.iterableValue

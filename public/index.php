@@ -114,6 +114,44 @@ $app->get('/', function ($request, $response) {
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+// Route de débogage pour tester le middleware
+$app->get('/debug-routes', function ($request, $response) {
+    $path = '/api/auth/verify-email/test-token';
+    $patterns = [
+        '/',
+        '/health',
+        '/api/auth/test',
+        '/api/auth/register',
+        '/api/auth/verify-email/*',
+        '/api/auth/resend-verification',
+        '/api/docs*',
+        '/api/status*',
+    ];
+    
+    $results = [];
+    foreach ($patterns as $pattern) {
+        // Nouvelle logique de matching
+        $tempPattern = str_replace('*', '__WILDCARD__', $pattern);
+        $escaped = preg_quote($tempPattern, '/');
+        $regex = str_replace('__WILDCARD__', '.*', $escaped);
+        $matches = preg_match("/^{$regex}$/", $path) === 1;
+        
+        $results[] = [
+            'pattern' => $pattern,
+            'regex' => "^{$regex}$",
+            'matches' => $matches
+        ];
+    }
+    
+    $data = [
+        'test_path' => $path,
+        'results' => $results
+    ];
+    
+    $response->getBody()->write(json_encode($data, JSON_PRETTY_PRINT));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
 // Route de health check
 $app->get('/health', function ($request, $response) {
     // TODO: Ajouter des vérifications de santé (DB, services externes, etc.)
@@ -134,23 +172,47 @@ $app->get('/health', function ($request, $response) {
 });
 
 // Groupe de routes pour l'API d'authentification
-$app->group('/api/auth', function ($group) {
-    // Les routes d'authentification seront ajoutées dans les prochaines étapes
-    
-    // Route de test pour vérifier la structure
-    $group->get('/test', function ($request, $response) {
-        $data = [
-            'message' => 'Auth API endpoint ready',
-            'available_endpoints' => [
-                'POST /api/auth/register' => 'User registration (coming soon)',
-                'POST /api/auth/login' => 'User login (coming soon)',
-                'GET /api/auth/verify-email/{token}' => 'Email verification (coming soon)',
-            ],
-        ];
-        
-        $response->getBody()->write(json_encode($data, JSON_PRETTY_PRINT));
-        return $response->withHeader('Content-Type', 'application/json');
+$app->group('/api/auth', function ($group) use ($container) {
+    // User registration
+    $group->post('/register', function ($request, $response) use ($container) {
+        $authController = $container->get('MyAuth\Controller\AuthController');
+        return $authController->register($request);
     });
+    
+    // Email verification
+    $group->get('/verify-email/{token}', function ($request, $response, $args) use ($container) {
+        $authController = $container->get('MyAuth\Controller\AuthController');
+        // Ajouter le token aux attributs de la requête
+        $request = $request->withAttribute('token', $args['token']);
+        return $authController->verifyEmail($request);
+    });
+    
+    // Resend verification email
+    $group->post('/resend-verification', function ($request, $response) use ($container) {
+        $authController = $container->get('MyAuth\Controller\AuthController');
+        return $authController->resendVerification($request);
+    });
+    
+    // Protected routes (require authentication)
+    $group->group('', function ($group) use ($container) {
+        // Get user profile
+        $group->get('/profile', function ($request, $response) use ($container) {
+            $authController = $container->get('MyAuth\Controller\AuthController');
+            return $authController->getProfile($request);
+        });
+        
+        // Update user profile
+        $group->put('/profile', function ($request, $response) use ($container) {
+            $authController = $container->get('MyAuth\Controller\AuthController');
+            return $authController->updateProfile($request);
+        });
+        
+        // Change password
+        $group->post('/change-password', function ($request, $response) use ($container) {
+            $authController = $container->get('MyAuth\Controller\AuthController');
+            return $authController->changePassword($request);
+        });
+    }); // TODO: Add authentication middleware here when JWT auth is implemented
 });
 
 // Groupe de routes protégées pour tester l'authentification API Key

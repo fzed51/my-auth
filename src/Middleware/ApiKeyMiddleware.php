@@ -110,12 +110,14 @@ class ApiKeyMiddleware implements MiddlewareInterface
      */
     private function isPublicRoute(string $path): bool
     {
+        error_log("Checking if path '{$path}' is public against routes: " . json_encode($this->publicRoutes));
         foreach ($this->publicRoutes as $publicRoute) {
             if ($this->matchRoute($path, $publicRoute)) {
+                error_log("Path '{$path}' matches public route '{$publicRoute}'");
                 return true;
             }
         }
-
+        error_log("Path '{$path}' is NOT public");
         return false;
     }
 
@@ -124,9 +126,19 @@ class ApiKeyMiddleware implements MiddlewareInterface
      */
     private function matchRoute(string $path, string $pattern): bool
     {
-        // Conversion du pattern en regex
-        $regex = str_replace('*', '.*', preg_quote($pattern, '/'));
-        return preg_match("/^{$regex}$/", $path) === 1;
+        // D'abord remplacer * par un placeholder temporaire
+        $tempPattern = str_replace('*', '__WILDCARD__', $pattern);
+        // Puis échapper les caractères regex
+        $escaped = preg_quote($tempPattern, '/');
+        // Puis remplacer le placeholder par .*
+        $regex = str_replace('__WILDCARD__', '.*', $escaped);
+
+        $matches = preg_match("/^{$regex}$/", $path) === 1;
+        error_log(
+            "Matching path '{$path}' against pattern '{$pattern}' " .
+            "(regex: ^{$regex}$) => " . ($matches ? 'YES' : 'NO')
+        );
+        return $matches;
     }
 
     /**
@@ -163,7 +175,11 @@ class ApiKeyMiddleware implements MiddlewareInterface
         $defaultPublicRoutes = [
             '/',
             '/health',
+            '/debug-routes',
             '/api/auth/test',
+            '/api/auth/register',
+            '/api/auth/verify-email/*',
+            '/api/auth/resend-verification',
             '/api/docs*',
             '/api/status*',
         ];

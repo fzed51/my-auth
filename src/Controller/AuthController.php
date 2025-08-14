@@ -1,0 +1,247 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MyAuth\Controller;
+
+use MyAuth\Service\UserService;
+use MyAuth\Exception\UserAlreadyExistsException;
+use MyAuth\Exception\UserNotFoundException;
+use MyAuth\Exception\EmailVerificationException;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseFactoryInterface;
+use InvalidArgumentException;
+use Exception;
+use Throwable;
+
+class AuthController
+{
+    private UserService $userService;
+    private ResponseFactoryInterface $responseFactory;
+
+    public function __construct(
+        UserService $userService,
+        ResponseFactoryInterface $responseFactory
+    ) {
+        $this->userService = $userService;
+        $this->responseFactory = $responseFactory;
+    }
+
+    public function register(ServerRequestInterface $request): ResponseInterface
+    {
+        try {
+            $data = $this->getJsonBody($request);
+
+            $user = $this->userService->register($data);
+
+            $response = $this->responseFactory->createResponse(201);
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'message' => 'User registered successfully. Please check your email to verify your account.',
+                'data' => $user->toPublicArray()
+            ], JSON_THROW_ON_ERROR));
+
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (UserAlreadyExistsException $e) {
+            return $this->createErrorResponse(409, 'User already exists', $e->getMessage());
+        } catch (InvalidArgumentException $e) {
+            return $this->createErrorResponse(400, 'Validation error', $e->getMessage());
+        } catch (Throwable $e) {
+            error_log('Registration error: ' . $e->getMessage());
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+        }
+    }
+
+    public function verifyEmail(ServerRequestInterface $request): ResponseInterface
+    {
+        try {
+            $token = $request->getAttribute('token');
+
+            if (empty($token)) {
+                return $this->createErrorResponse(400, 'Invalid request', 'Token is required');
+            }
+
+            $user = $this->userService->verifyEmail($token);
+
+            $response = $this->responseFactory->createResponse(200);
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'message' => 'Email verified successfully. Your account is now active.',
+                'data' => $user->toPublicArray()
+            ], JSON_THROW_ON_ERROR));
+
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (EmailVerificationException $e) {
+            $statusCode = $e->getCode() ?: 400;
+            return $this->createErrorResponse($statusCode, 'Verification error', $e->getMessage());
+        } catch (UserNotFoundException $e) {
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
+        } catch (Throwable $e) {
+            error_log('Email verification error: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+
+            // En mode développement, retourner l'erreur détaillée
+            if (($_ENV['APP_ENV'] ?? 'development') === 'development') {
+                return $this->createErrorResponse(
+                    500,
+                    'Internal server error',
+                    'Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()
+                );
+            }
+
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+        }
+    }
+
+    public function resendVerification(ServerRequestInterface $request): ResponseInterface
+    {
+        try {
+            $data = $this->getJsonBody($request);
+
+            if (empty($data['email'])) {
+                return $this->createErrorResponse(400, 'Validation error', 'Email is required');
+            }
+
+            $this->userService->resendVerificationEmail($data['email']);
+
+            $response = $this->responseFactory->createResponse(200);
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'message' => 'Verification email sent successfully. Please check your email.'
+            ], JSON_THROW_ON_ERROR));
+
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (UserNotFoundException $e) {
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
+        } catch (EmailVerificationException $e) {
+            $statusCode = $e->getCode() ?: 400;
+            return $this->createErrorResponse($statusCode, 'Verification error', $e->getMessage());
+        } catch (Throwable $e) {
+            error_log('Resend verification error: ' . $e->getMessage());
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+        }
+    }
+
+    public function getProfile(ServerRequestInterface $request): ResponseInterface
+    {
+        try {
+            $userId = $request->getAttribute('user_id');
+
+            if (empty($userId)) {
+                return $this->createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
+            }
+
+            $user = $this->userService->getUserById($userId);
+
+            $response = $this->responseFactory->createResponse(200);
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'data' => $user->toPublicArray()
+            ], JSON_THROW_ON_ERROR));
+
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (UserNotFoundException $e) {
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
+        } catch (Throwable $e) {
+            error_log('Get profile error: ' . $e->getMessage());
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+        }
+    }
+
+    public function updateProfile(ServerRequestInterface $request): ResponseInterface
+    {
+        try {
+            $userId = $request->getAttribute('user_id');
+            $data = $this->getJsonBody($request);
+
+            if (empty($userId)) {
+                return $this->createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
+            }
+
+            $user = $this->userService->updateProfile($userId, $data);
+
+            $response = $this->responseFactory->createResponse(200);
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'message' => 'Profile updated successfully',
+                'data' => $user->toPublicArray()
+            ], JSON_THROW_ON_ERROR));
+
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (UserNotFoundException $e) {
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
+        } catch (InvalidArgumentException $e) {
+            return $this->createErrorResponse(400, 'Validation error', $e->getMessage());
+        } catch (Throwable $e) {
+            error_log('Update profile error: ' . $e->getMessage());
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+        }
+    }
+
+    public function changePassword(ServerRequestInterface $request): ResponseInterface
+    {
+        try {
+            $userId = $request->getAttribute('user_id');
+            $data = $this->getJsonBody($request);
+
+            if (empty($userId)) {
+                return $this->createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
+            }
+
+            $requiredFields = ['currentPassword', 'newPassword'];
+            foreach ($requiredFields as $field) {
+                if (empty($data[$field])) {
+                    return $this->createErrorResponse(400, 'Validation error', "Field '{$field}' is required");
+                }
+            }
+
+            $this->userService->changePassword($userId, $data['currentPassword'], $data['newPassword']);
+
+            $response = $this->responseFactory->createResponse(200);
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'message' => 'Password changed successfully'
+            ], JSON_THROW_ON_ERROR));
+
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (UserNotFoundException $e) {
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
+        } catch (InvalidArgumentException $e) {
+            return $this->createErrorResponse(400, 'Validation error', $e->getMessage());
+        } catch (Throwable $e) {
+            error_log('Change password error: ' . $e->getMessage());
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+        }
+    }
+
+    private function getJsonBody(ServerRequestInterface $request): array
+    {
+        $body = (string) $request->getBody();
+
+        if (empty($body)) {
+            throw new InvalidArgumentException('Request body is required');
+        }
+
+        $data = json_decode($body, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new InvalidArgumentException('Invalid JSON in request body');
+        }
+
+        return $data ?? [];
+    }
+
+    private function createErrorResponse(int $statusCode, string $error, string $message): ResponseInterface
+    {
+        $response = $this->responseFactory->createResponse($statusCode);
+        $response->getBody()->write(json_encode([
+            'success' => false,
+            'error' => $error,
+            'message' => $message,
+            'code' => $statusCode
+        ], JSON_THROW_ON_ERROR));
+
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+}

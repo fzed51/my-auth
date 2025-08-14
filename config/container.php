@@ -85,27 +85,74 @@ return function (ContainerBuilder $containerBuilder): void {
         // =================================================================
         
         PDO::class => function ($container): PDO {
+            // Pour les tests sans base de données, on peut retourner un mock
+            if (($_ENV['APP_ENV'] ?? 'development') === 'testing-no-db') {
+                throw new RuntimeException('Database disabled for testing');
+            }
+            
             $config = $container->get('config.database');
+            $dbConfig = $config['database']; // Accès au sous-tableau 'database'
             
             // Construction du DSN
             $dsn = sprintf(
                 'mysql:host=%s;port=%d;dbname=%s;charset=%s',
-                $config['host'],
-                $config['port'],
-                $config['database'],
-                $config['charset']
+                $dbConfig['host'],
+                $dbConfig['port'],
+                $dbConfig['dbname'],
+                $dbConfig['charset']
             );
             
             try {
                 $pdo = new PDO(
                     $dsn,
-                    $config['username'],
-                    $config['password'],
-                    $config['options']
+                    $dbConfig['username'],
+                    $dbConfig['password'],
+                    $dbConfig['options']
                 );
                 
                 return $pdo;
             } catch (PDOException $e) {
+                // Pour les tests de développement, créer un SQLite en mémoire
+                if (($_ENV['APP_ENV'] ?? 'development') === 'development') {
+                    error_log('MySQL connection failed, using SQLite for testing: ' . $e->getMessage());
+                    $pdo = new PDO('sqlite::memory:');
+                    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Créer les tables de base pour les tests
+                    $createTablesFunc = function(PDO $pdo) {
+                        $pdo->exec("
+                            CREATE TABLE users (
+                                id TEXT PRIMARY KEY,
+                                email TEXT UNIQUE NOT NULL,
+                                password_hash TEXT NOT NULL,
+                                first_name TEXT,
+                                last_name TEXT,
+                                is_active INTEGER DEFAULT 0,
+                                is_verified INTEGER DEFAULT 0,
+                                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                            )
+                        ");
+                        
+                        $pdo->exec("
+                            CREATE TABLE email_verifications (
+                                id TEXT PRIMARY KEY,
+                                user_id TEXT NOT NULL,
+                                token TEXT UNIQUE NOT NULL,
+                                expires_at TEXT NOT NULL,
+                                is_used INTEGER DEFAULT 0,
+                                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                                used_at TEXT,
+                                FOREIGN KEY (user_id) REFERENCES users(id)
+                            )
+                        ");
+                    };
+                    
+                    $createTablesFunc($pdo);
+                    
+                    return $pdo;
+                }
+                
                 throw new RuntimeException(
                     'Database connection failed: ' . $e->getMessage(),
                     0,
@@ -123,6 +170,16 @@ return function (ContainerBuilder $containerBuilder): void {
             return new \MyAuth\Repository\ServiceRepository($servicesConfigPath);
         },
         
+        'MyAuth\Repository\UserRepository' => function (ContainerInterface $container): \MyAuth\Repository\UserRepository {
+            $pdo = $container->get(PDO::class);
+            return new \MyAuth\Repository\UserRepository($pdo);
+        },
+        
+        'MyAuth\Repository\EmailVerificationRepository' => function (ContainerInterface $container): \MyAuth\Repository\EmailVerificationRepository {
+            $pdo = $container->get(PDO::class);
+            return new \MyAuth\Repository\EmailVerificationRepository($pdo);
+        },
+        
         // =================================================================
         // SERVICES
         // =================================================================
@@ -130,6 +187,17 @@ return function (ContainerBuilder $containerBuilder): void {
         'MyAuth\Service\ServiceAuthService' => function (ContainerInterface $container): \MyAuth\Service\ServiceAuthService {
             $serviceRepository = $container->get('MyAuth\Repository\ServiceRepository');
             return new \MyAuth\Service\ServiceAuthService($serviceRepository);
+        },
+        
+        'MyAuth\Service\UserService' => function (ContainerInterface $container): \MyAuth\Service\UserService {
+            $userRepository = $container->get('MyAuth\Repository\UserRepository');
+            $emailVerificationRepository = $container->get('MyAuth\Repository\EmailVerificationRepository');
+            $emailService = $container->get('MyAuth\Service\EmailService');
+            return new \MyAuth\Service\UserService($userRepository, $emailVerificationRepository, $emailService);
+        },
+        
+        'MyAuth\Service\EmailService' => function (ContainerInterface $container): \MyAuth\Service\EmailService {
+            return new \MyAuth\Service\EmailService();
         },
         
         // =================================================================
@@ -143,8 +211,11 @@ return function (ContainerBuilder $containerBuilder): void {
         // CONTROLLERS
         // =================================================================
         
-        // Les contrôleurs seront automatiquement résolus via l'autoloader
-        // grâce à l'autowiring de PHP-DI
+        'MyAuth\Controller\AuthController' => function (ContainerInterface $container): \MyAuth\Controller\AuthController {
+            $userService = $container->get('MyAuth\Service\UserService');
+            $responseFactory = $container->get('Psr\Http\Message\ResponseFactoryInterface');
+            return new \MyAuth\Controller\AuthController($userService, $responseFactory);
+        },
         
         // =================================================================
         // HTTP FACTORIES

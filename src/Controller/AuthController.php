@@ -48,14 +48,14 @@ class AuthController
      *
      * @var UserService
      */
-    private UserService $_userService;
+    private UserService $userService;
 
     /**
      * HTTP response factory instance
      *
      * @var ResponseFactoryInterface
      */
-    private ResponseFactoryInterface $_responseFactory;
+    private ResponseFactoryInterface $responseFactory;
 
     /**
      * AuthController constructor
@@ -67,8 +67,8 @@ class AuthController
         UserService $userService,
         ResponseFactoryInterface $responseFactory
     ) {
-        $this->_userService = $userService;
-        $this->_responseFactory = $responseFactory;
+        $this->userService = $userService;
+        $this->responseFactory = $responseFactory;
     }
 
     /**
@@ -84,11 +84,11 @@ class AuthController
     public function register(ServerRequestInterface $request): ResponseInterface
     {
         try {
-            $data = $this->_getJsonBody($request);
+            $data = $this->getJsonBody($request);
 
-            $user = $this->_userService->register($data);
+            $user = $this->userService->register($data);
 
-            $response = $this->_responseFactory->createResponse(201);
+            $response = $this->responseFactory->createResponse(201);
             $response->getBody()->write(
                 json_encode(
                     [
@@ -101,12 +101,12 @@ class AuthController
 
             return $response->withHeader('Content-Type', 'application/json');
         } catch (UserAlreadyExistsException $e) {
-            return $this->_createErrorResponse(409, 'User already exists', $e->getMessage());
+            return $this->createErrorResponse(409, 'User already exists', $e->getMessage());
         } catch (InvalidArgumentException $e) {
-            return $this->_createErrorResponse(400, 'Validation error', $e->getMessage());
+            return $this->createErrorResponse(400, 'Validation error', $e->getMessage());
         } catch (Throwable $e) {
             error_log('Registration error: ' . $e->getMessage());
-            return $this->_createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
         }
     }
 
@@ -124,12 +124,12 @@ class AuthController
     {
         try {
             if (empty($token)) {
-                return $this->_createErrorResponse(400, 'Invalid request', 'Token is required');
+                return $this->createErrorResponse(400, 'Invalid request', 'Token is required');
             }
 
-            $user = $this->_userService->verifyEmail($token);
+            $user = $this->userService->verifyEmail($token);
 
-            $response = $this->_responseFactory->createResponse(200);
+            $response = $this->responseFactory->createResponse(200);
             $response->getBody()->write(
                 json_encode(
                     [
@@ -143,38 +143,38 @@ class AuthController
             return $response->withHeader('Content-Type', 'application/json');
         } catch (EmailVerificationException $e) {
             $statusCode = $e->getCode() ?: 400;
-            return $this->_createErrorResponse($statusCode, 'Verification error', $e->getMessage());
+            return $this->createErrorResponse($statusCode, 'Verification error', $e->getMessage());
         } catch (UserNotFoundException $e) {
-            return $this->_createErrorResponse(404, 'User not found', $e->getMessage());
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
         } catch (Throwable $e) {
             error_log('Email verification error: ' . $e->getMessage());
             error_log('Stack trace: ' . $e->getTraceAsString());
 
             // En mode développement, retourner l'erreur détaillée
             if (($_ENV['APP_ENV'] ?? 'development') === 'development') {
-                return $this->_createErrorResponse(
+                return $this->createErrorResponse(
                     500,
                     'Internal server error',
                     'Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()
                 );
             }
 
-            return $this->_createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
         }
     }
 
     public function resendVerification(ServerRequestInterface $request): ResponseInterface
     {
         try {
-            $data = $this->_getJsonBody($request);
+            $data = $this->getJsonBody($request);
 
             if (empty($data['email'])) {
-                return $this->_createErrorResponse(400, 'Validation error', 'Email is required');
+                return $this->createErrorResponse(400, 'Validation error', 'Email is required');
             }
 
-            $this->_userService->resendVerificationEmail($data['email']);
+            $this->userService->resendVerificationEmail($data['email']);
 
-            $response = $this->_responseFactory->createResponse(200);
+            $response = $this->responseFactory->createResponse(200);
             $response->getBody()->write(
                 json_encode(
                     [
@@ -186,13 +186,13 @@ class AuthController
 
             return $response->withHeader('Content-Type', 'application/json');
         } catch (UserNotFoundException $e) {
-            return $this->_createErrorResponse(404, 'User not found', $e->getMessage());
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
         } catch (EmailVerificationException $e) {
             $statusCode = $e->getCode() ?: 400;
-            return $this->_createErrorResponse($statusCode, 'Verification error', $e->getMessage());
+            return $this->createErrorResponse($statusCode, 'Verification error', $e->getMessage());
         } catch (Throwable $e) {
             error_log('Resend verification error: ' . $e->getMessage());
-            return $this->_createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
         }
     }
 
@@ -202,12 +202,12 @@ class AuthController
             $userId = $request->getAttribute('user_id');
 
             if (empty($userId)) {
-                return $this->_createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
+                return $this->createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
             }
 
-            $user = $this->_userService->getUserById($userId);
+            $user = $this->userService->getUserById($userId);
 
-            $response = $this->_responseFactory->createResponse(200);
+            $response = $this->responseFactory->createResponse(200);
             $response->getBody()->write(
                 json_encode(
                     [
@@ -219,10 +219,10 @@ class AuthController
 
             return $response->withHeader('Content-Type', 'application/json');
         } catch (UserNotFoundException $e) {
-            return $this->_createErrorResponse(404, 'User not found', $e->getMessage());
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
         } catch (Throwable $e) {
             error_log('Get profile error: ' . $e->getMessage());
-            return $this->_createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
         }
     }
 
@@ -230,15 +230,15 @@ class AuthController
     {
         try {
             $userId = $request->getAttribute('user_id');
-            $data = $this->_getJsonBody($request);
+            $data = $this->getJsonBody($request);
 
             if (empty($userId)) {
-                return $this->_createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
+                return $this->createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
             }
 
-            $user = $this->_userService->updateProfile($userId, $data);
+            $user = $this->userService->updateProfile($userId, $data);
 
-            $response = $this->_responseFactory->createResponse(200);
+            $response = $this->responseFactory->createResponse(200);
             $response->getBody()->write(
                 json_encode(
                     [
@@ -251,12 +251,12 @@ class AuthController
 
             return $response->withHeader('Content-Type', 'application/json');
         } catch (UserNotFoundException $e) {
-            return $this->_createErrorResponse(404, 'User not found', $e->getMessage());
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
         } catch (InvalidArgumentException $e) {
-            return $this->_createErrorResponse(400, 'Validation error', $e->getMessage());
+            return $this->createErrorResponse(400, 'Validation error', $e->getMessage());
         } catch (Throwable $e) {
             error_log('Update profile error: ' . $e->getMessage());
-            return $this->_createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
         }
     }
 
@@ -264,22 +264,22 @@ class AuthController
     {
         try {
             $userId = $request->getAttribute('user_id');
-            $data = $this->_getJsonBody($request);
+            $data = $this->getJsonBody($request);
 
             if (empty($userId)) {
-                return $this->_createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
+                return $this->createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
             }
 
             $requiredFields = ['currentPassword', 'newPassword'];
             foreach ($requiredFields as $field) {
                 if (empty($data[$field])) {
-                    return $this->_createErrorResponse(400, 'Validation error', "Field '{$field}' is required");
+                    return $this->createErrorResponse(400, 'Validation error', "Field '{$field}' is required");
                 }
             }
 
-            $this->_userService->changePassword($userId, $data['currentPassword'], $data['newPassword']);
+            $this->userService->changePassword($userId, $data['currentPassword'], $data['newPassword']);
 
-            $response = $this->_responseFactory->createResponse(200);
+            $response = $this->responseFactory->createResponse(200);
             $response->getBody()->write(
                 json_encode(
                     [
@@ -291,16 +291,16 @@ class AuthController
 
             return $response->withHeader('Content-Type', 'application/json');
         } catch (UserNotFoundException $e) {
-            return $this->_createErrorResponse(404, 'User not found', $e->getMessage());
+            return $this->createErrorResponse(404, 'User not found', $e->getMessage());
         } catch (InvalidArgumentException $e) {
-            return $this->_createErrorResponse(400, 'Validation error', $e->getMessage());
+            return $this->createErrorResponse(400, 'Validation error', $e->getMessage());
         } catch (Throwable $e) {
             error_log('Change password error: ' . $e->getMessage());
-            return $this->_createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
+            return $this->createErrorResponse(500, 'Internal server error', 'An unexpected error occurred');
         }
     }
 
-    private function _getJsonBody(ServerRequestInterface $request): array
+    private function getJsonBody(ServerRequestInterface $request): array
     {
         $body = (string) $request->getBody();
 
@@ -317,9 +317,9 @@ class AuthController
         return $data ?? [];
     }
 
-    private function _createErrorResponse(int $statusCode, string $error, string $message): ResponseInterface
+    private function createErrorResponse(int $statusCode, string $error, string $message): ResponseInterface
     {
-        $response = $this->_responseFactory->createResponse($statusCode);
+        $response = $this->responseFactory->createResponse($statusCode);
         $response->getBody()->write(
             json_encode(
                 [

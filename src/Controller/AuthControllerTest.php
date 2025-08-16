@@ -52,42 +52,42 @@ class AuthControllerTest extends TestCase
      *
      * @var UserService&MockObject 
      */
-    private MockObject $_userService;
+    private MockObject $userService;
 
     /**
      * Mock object for ResponseFactoryInterface
      *
      * @var ResponseFactoryInterface&MockObject 
      */
-    private MockObject $_responseFactory;
+    private MockObject $responseFactory;
 
     /**
      * The AuthController instance being tested
      *
      * @var AuthController
      */
-    private AuthController $_authController;
+    private AuthController $authController;
 
     /**
      * Mock object for ServerRequestInterface
      *
      * @var ServerRequestInterface&MockObject 
      */
-    private MockObject $_request;
+    private MockObject $request;
 
     /**
      * Mock object for ResponseInterface
      *
      * @var ResponseInterface&MockObject 
      */
-    private MockObject $_response;
+    private MockObject $response;
 
     /**
      * Mock object for StreamInterface
      *
      * @var StreamInterface&MockObject 
      */
-    private MockObject $_stream;
+    private MockObject $stream;
 
     /**
      * Helper method to safely decode JSON for testing
@@ -96,7 +96,7 @@ class AuthControllerTest extends TestCase
      *
      * @return array<string, mixed> The decoded JSON as an associative array
      */
-    private function _decodeJson(string $content): array
+    private function decodeJson(string $content): array
     {
         $decoded = json_decode($content, true);
         $this->assertIsArray($decoded, 'JSON decode should return an array');
@@ -110,7 +110,7 @@ class AuthControllerTest extends TestCase
      *
      * @return MockObject The mock stream object
      */
-    private function _createJsonBodyStream(array $data): MockObject
+    private function createJsonBodyStream(array $data): MockObject
     {
         $bodyStream = $this->createMock(StreamInterface::class);
         $bodyStream->method('__toString')->willReturn(json_encode($data));
@@ -126,34 +126,34 @@ class AuthControllerTest extends TestCase
      */
     protected function setUp(): void
     {
-        $this->_userService = $this->createMock(UserService::class);
-        $this->_responseFactory = $this->createMock(ResponseFactoryInterface::class);
-        $this->_request = $this->createMock(ServerRequestInterface::class);
-        $this->_response = $this->createMock(ResponseInterface::class);
-        $this->_stream = $this->createMock(StreamInterface::class);
+        $this->userService = $this->createMock(UserService::class);
+        $this->responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $this->request = $this->createMock(ServerRequestInterface::class);
+        $this->response = $this->createMock(ResponseInterface::class);
+        $this->stream = $this->createMock(StreamInterface::class);
 
-        $this->_authController = new AuthController(
-            $this->_userService,
-            $this->_responseFactory
+        $this->authController = new AuthController(
+            $this->userService,
+            $this->responseFactory
         );
 
         // Setup response factory mock
-        $this->_responseFactory
+        $this->responseFactory
             ->method('createResponse')
-            ->willReturn($this->_response);
+            ->willReturn($this->response);
 
         // Setup response mock
-        $this->_response
+        $this->response
             ->method('withHeader')
             ->willReturnSelf();
 
-        $this->_response
+        $this->response
             ->method('withStatus')
             ->willReturnSelf();
 
-        $this->_response
+        $this->response
             ->method('getBody')
-            ->willReturn($this->_stream);
+            ->willReturn($this->stream);
     }
 
     /**
@@ -181,26 +181,26 @@ class AuthControllerTest extends TestCase
             lastName: 'Doe'
         );
 
-        $bodyStream = $this->_createJsonBodyStream($userData);
+        $bodyStream = $this->createJsonBodyStream($userData);
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
             ->willReturn($bodyStream);
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('register')
             ->with($userData)
             ->willReturn($user);
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === true &&
                            $data['message'] === 'User registered successfully. ' .
                                             'Please check your email to verify your account.' &&
@@ -214,7 +214,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->register($this->_request);
+        $response = $this->authController->register($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -235,24 +235,24 @@ class AuthControllerTest extends TestCase
             'last_name' => 'Doe'
         ];
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
-            ->willReturn($this->_createJsonBodyStream($userData));
+            ->willReturn($this->createJsonBodyStream($userData));
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('register')
             ->with($userData)
             ->willThrowException(new UserAlreadyExistsException('existing@example.com'));
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === false &&
                            $data['error'] === 'User already exists' &&
                            $data['message'] === "User with email 'existing@example.com' already exists" &&
@@ -261,7 +261,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->register($this->_request);
+        $response = $this->authController->register($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -282,24 +282,24 @@ class AuthControllerTest extends TestCase
             'last_name' => 'Doe'
         ];
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
-            ->willReturn($this->_createJsonBodyStream($userData));
+            ->willReturn($this->createJsonBodyStream($userData));
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('register')
             ->with($userData)
             ->willThrowException(new \InvalidArgumentException('Invalid email format'));
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === false &&
                            $data['error'] === 'Validation error' &&
                            $data['message'] === 'Invalid email format' &&
@@ -308,7 +308,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->register($this->_request);
+        $response = $this->authController->register($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -332,19 +332,19 @@ class AuthControllerTest extends TestCase
         );
         $user->verifyEmail(); // Mark as verified
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('verifyEmail')
             ->with($token)
             ->willReturn($user);
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === true &&
                            $data['message'] === 'Email verified successfully. Your account is now active.' &&
                            isset($data['data']) &&
@@ -354,7 +354,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->verifyEmail($this->_request, $token);
+        $response = $this->authController->verifyEmail($this->request, $token);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -362,19 +362,19 @@ class AuthControllerTest extends TestCase
     {
         $token = 'invalid-token';
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('verifyEmail')
             ->with($token)
             ->willThrowException(new EmailVerificationException('Invalid or expired verification token'));
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === false &&
                            $data['error'] === 'Verification error' &&
                            $data['message'] === 'Invalid or expired verification token' &&
@@ -383,7 +383,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->verifyEmail($this->_request, $token);
+        $response = $this->authController->verifyEmail($this->request, $token);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -391,30 +391,30 @@ class AuthControllerTest extends TestCase
     {
         $email = 'test@example.com';
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
-            ->willReturn($this->_createJsonBodyStream(['email' => $email]));
+            ->willReturn($this->createJsonBodyStream(['email' => $email]));
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('resendVerificationEmail')
             ->with($email);
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === true &&
                            $data['message'] === 'Verification email sent successfully. Please check your email.';
                     }
                 )
             );
 
-        $response = $this->_authController->resendVerification($this->_request);
+        $response = $this->authController->resendVerification($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -422,12 +422,12 @@ class AuthControllerTest extends TestCase
     {
         $email = 'test@example.com';
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
-            ->willReturn($this->_createJsonBodyStream(['email' => $email]));
+            ->willReturn($this->createJsonBodyStream(['email' => $email]));
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('resendVerificationEmail')
             ->with($email)
@@ -437,13 +437,13 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === false &&
                            $data['error'] === 'Verification error' &&
                            $data['message'] === 'Verification email already sent recently. ' .
@@ -453,7 +453,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->resendVerification($this->_request);
+        $response = $this->authController->resendVerification($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -468,25 +468,25 @@ class AuthControllerTest extends TestCase
             lastName: 'Doe'
         );
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getAttribute')
             ->with('user_id')
             ->willReturn($userId);
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('getUserById')
             ->with($userId)
             ->willReturn($user);
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === true &&
                            isset($data['data']) &&
                            $data['data']['email'] === 'test@example.com' &&
@@ -495,7 +495,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->getProfile($this->_request);
+        $response = $this->authController->getProfile($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -515,30 +515,30 @@ class AuthControllerTest extends TestCase
             lastName: 'Smith'
         );
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getAttribute')
             ->with('user_id')
             ->willReturn($userId);
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
-            ->willReturn($this->_createJsonBodyStream($updateData));
+            ->willReturn($this->createJsonBodyStream($updateData));
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('updateProfile')
             ->with($userId, $updateData)
             ->willReturn($updatedUser);
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === true &&
                            $data['message'] === 'Profile updated successfully' &&
                            isset($data['data']) &&
@@ -548,7 +548,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->updateProfile($this->_request);
+        $response = $this->authController->updateProfile($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -560,36 +560,36 @@ class AuthControllerTest extends TestCase
             'newPassword' => 'NewPass123!'
         ];
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getAttribute')
             ->with('user_id')
             ->willReturn($userId);
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
-            ->willReturn($this->_createJsonBodyStream($passwordData));
+            ->willReturn($this->createJsonBodyStream($passwordData));
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('changePassword')
             ->with($userId, 'OldPass123!', 'NewPass123!');
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === true &&
                            $data['message'] === 'Password changed successfully';
                     }
                 )
             );
 
-        $response = $this->_authController->changePassword($this->_request);
+        $response = $this->authController->changePassword($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -601,30 +601,30 @@ class AuthControllerTest extends TestCase
             'newPassword' => 'NewPass123!'
         ];
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getAttribute')
             ->with('user_id')
             ->willReturn($userId);
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
-            ->willReturn($this->_createJsonBodyStream($passwordData));
+            ->willReturn($this->createJsonBodyStream($passwordData));
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('changePassword')
             ->with($userId, 'WrongPass123!', 'NewPass123!')
             ->willThrowException(new UserException('Current password is incorrect'));
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === false &&
                            $data['error'] === 'Internal server error' &&
                            $data['message'] === 'An unexpected error occurred' &&
@@ -633,30 +633,30 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->changePassword($this->_request);
+        $response = $this->authController->changePassword($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
     public function testMissingRequiredFields(): void
     {
         // Test register with missing data
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
-            ->willReturn($this->_createJsonBodyStream(['email' => 'test@example.com'])); // Missing other fields
+            ->willReturn($this->createJsonBodyStream(['email' => 'test@example.com'])); // Missing other fields
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('register')
             ->willThrowException(new UserException('Required fields missing: password, first_name, last_name'));
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === false &&
                            $data['error'] === 'Internal server error' &&
                            $data['message'] === 'An unexpected error occurred' &&
@@ -665,7 +665,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->register($this->_request);
+        $response = $this->authController->register($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 
@@ -678,23 +678,23 @@ class AuthControllerTest extends TestCase
             'last_name' => 'Doe'
         ];
 
-        $this->_request
+        $this->request
             ->expects($this->once())
             ->method('getBody')
-            ->willReturn($this->_createJsonBodyStream($userData));
+            ->willReturn($this->createJsonBodyStream($userData));
 
-        $this->_userService
+        $this->userService
             ->expects($this->once())
             ->method('register')
             ->willThrowException(new \Exception('Database connection failed'));
 
-        $this->_stream
+        $this->stream
             ->expects($this->once())
             ->method('write')
             ->with(
                 $this->callback(
                     function ($content) {
-                        $data = $this->_decodeJson($content);
+                        $data = $this->decodeJson($content);
                         return $data['success'] === false &&
                            $data['error'] === 'Internal server error' &&
                            $data['message'] === 'An unexpected error occurred' &&
@@ -703,7 +703,7 @@ class AuthControllerTest extends TestCase
                 )
             );
 
-        $response = $this->_authController->register($this->_request);
+        $response = $this->authController->register($this->request);
         $this->assertInstanceOf(ResponseInterface::class, $response);
     }
 }

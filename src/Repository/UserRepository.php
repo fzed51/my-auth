@@ -37,7 +37,7 @@ class UserRepository extends AbstractRepository
 
     public function findByIdOrFail(string $id): User
     {
-        $user = $this->findById($id);
+        $user = $this->findUserById($id);
 
         if (!$user) {
             throw new UserNotFoundException($id);

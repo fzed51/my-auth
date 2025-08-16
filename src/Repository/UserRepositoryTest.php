@@ -41,7 +41,8 @@ class UserRepositoryTest extends TestCase
 
     protected function tearDown(): void
     {
-        $this->pdo = null;
+        // Fermer proprement la connexion PDO
+        $this->pdo->exec('PRAGMA foreign_keys = OFF');
     }
 
     public function testGetTableName(): void
@@ -268,7 +269,7 @@ class UserRepositoryTest extends TestCase
                 ('id3', 'user3@example.com', 'hash', 'User', 'Three', datetime('now', '-8 days'))
         ");
 
-        $recentUsers = $this->repository->findRecentUsers(7, 2);
+        $recentUsers = $this->repository->findRecentUsers(2);
 
         $this->assertCount(2, $recentUsers);
         $this->assertEquals('id1', $recentUsers[0]->getId());

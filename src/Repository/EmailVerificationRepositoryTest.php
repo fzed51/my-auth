@@ -12,12 +12,12 @@ use DateTime;
 
 class EmailVerificationRepositoryTest extends TestCase
 {
-    private ?PDO $pdo = null;
-    private ?EmailVerificationRepository $repository = null;
+    private PDO $pdo;
+    private EmailVerificationRepository $repository;
 
     private function generateValidToken(): string
     {
-        return str_repeat('a', 32); // Token de 32 caractères
+        return bin2hex(random_bytes(16)); // Token unique de 32 caractères
     }
 
     protected function setUp(): void
@@ -65,7 +65,7 @@ class EmailVerificationRepositoryTest extends TestCase
 
     protected function tearDown(): void
     {
-        $this->pdo = null;
+        // Cleanup is automatic for in-memory SQLite
     }
 
     public function testGetTableName(): void
@@ -95,26 +95,28 @@ class EmailVerificationRepositoryTest extends TestCase
     public function testFindValidByTokenExpired(): void
     {
         // Insert expired token
+        $expiredToken = $this->generateValidToken();
         $expiresAt = (new DateTime('-1 hour'))->format('Y-m-d H:i:s');
         $this->pdo->exec("
             INSERT INTO email_verifications (id, user_id, token, expires_at, is_used, created_at)
-            VALUES ('test-id', 'user-id', '$this->generateValidToken()', '{$expiresAt}', 0, datetime('now', '-2 hours'))
+            VALUES ('test-id', 'user-id', '{$expiredToken}', '{$expiresAt}', 0, datetime('now', '-2 hours'))
         ");
 
-        $verification = $this->repository->findValidByToken('$this->generateValidToken()');
+        $verification = $this->repository->findValidByToken($expiredToken);
         $this->assertNull($verification);
     }
 
     public function testFindValidByTokenUsed(): void
     {
         // Insert used token
+        $usedToken = $this->generateValidToken();
         $expiresAt = (new DateTime('+24 hours'))->format('Y-m-d H:i:s');
         $this->pdo->exec("
             INSERT INTO email_verifications (id, user_id, token, expires_at, is_used)
-            VALUES ('test-id', 'user-id', '$this->generateValidToken()', '{$expiresAt}', 1)
+            VALUES ('test-id', 'user-id', '{$usedToken}', '{$expiresAt}', 1)
         ");
 
-        $verification = $this->repository->findValidByToken('$this->generateValidToken()');
+        $verification = $this->repository->findValidByToken($usedToken);
         $this->assertNull($verification);
     }
 
@@ -127,10 +129,11 @@ class EmailVerificationRepositoryTest extends TestCase
     public function testFindPendingByUserId(): void
     {
         // Insert pending verification
+        $pendingToken = $this->generateValidToken();
         $expiresAt = (new DateTime('+24 hours'))->format('Y-m-d H:i:s');
         $this->pdo->exec("
             INSERT INTO email_verifications (id, user_id, token, expires_at, is_used)
-            VALUES ('test-id', 'user-id', '$this->generateValidToken()', '{$expiresAt}', 0)
+            VALUES ('test-id', 'user-id', '{$pendingToken}', '{$expiresAt}', 0)
         ");
 
         $verification = $this->repository->findPendingByUserId('user-id');
@@ -149,10 +152,11 @@ class EmailVerificationRepositoryTest extends TestCase
 
     public function testCreate(): void
     {
+        $createToken = $this->generateValidToken();
         $verification = new EmailVerification(
             id: 'test-id',
             userId: 'user-id',
-            token: '$this->generateValidToken()',
+            token: $createToken,
             expiresAt: new DateTime('+24 hours')
         );
 
@@ -163,10 +167,10 @@ class EmailVerificationRepositoryTest extends TestCase
         $stmt->execute(['test-id']);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $this->assertNotFalse($row);
+        $this->assertIsArray($row);
         $this->assertEquals('test-id', $row['id']);
         $this->assertEquals('user-id', $row['user_id']);
-        $this->assertEquals('$this->generateValidToken()', $row['token']);
+        $this->assertEquals($createToken, $row['token']);
         $this->assertEquals(0, $row['is_used']);
         $this->assertNull($row['used_at']);
     }
@@ -174,19 +178,21 @@ class EmailVerificationRepositoryTest extends TestCase
     public function testMarkAsUsed(): void
     {
         // Insert verification
+        $markToken = $this->generateValidToken();
         $expiresAt = (new DateTime('+24 hours'))->format('Y-m-d H:i:s');
         $this->pdo->exec("
             INSERT INTO email_verifications (id, user_id, token, expires_at, is_used)
-            VALUES ('test-id', 'user-id', '$this->generateValidToken()', '{$expiresAt}', 0)
+            VALUES ('test-id', 'user-id', '{$markToken}', '{$expiresAt}', 0)
         ");
 
-        $this->repository->markAsUsed('$this->generateValidToken()');
+        $this->repository->markAsUsed($markToken);
 
         // Verify it was marked as used
         $stmt = $this->pdo->prepare('SELECT * FROM email_verifications WHERE token = ?');
-        $stmt->execute(['$this->generateValidToken()']);
+        $stmt->execute([$markToken]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
+        $this->assertIsArray($row);
         $this->assertEquals(1, $row['is_used']);
         $this->assertNotNull($row['used_at']);
     }
@@ -202,14 +208,16 @@ class EmailVerificationRepositoryTest extends TestCase
     public function testDeleteExpired(): void
     {
         // Insert expired and valid tokens
+        $expiredToken = $this->generateValidToken();
+        $validToken = $this->generateValidToken();
         $expiredAt = (new DateTime('-1 hour'))->format('Y-m-d H:i:s');
         $validAt = (new DateTime('+24 hours'))->format('Y-m-d H:i:s');
 
         $this->pdo->exec("
             INSERT INTO email_verifications (id, user_id, token, expires_at, is_used)
             VALUES 
-                ('expired-id', 'user-id', '$this->generateValidToken()', '{$expiredAt}', 0),
-                ('valid-id', 'user-id', '$this->generateValidToken()', '{$validAt}', 0)
+                ('expired-id', 'user-id', '{$expiredToken}', '{$expiredAt}', 0),
+                ('valid-id', 'user-id', '{$validToken}', '{$validAt}', 0)
         ");
 
         $deletedCount = $this->repository->deleteExpired();
@@ -225,21 +233,22 @@ class EmailVerificationRepositoryTest extends TestCase
 
         // Verify valid token still exists
         $stmt = $this->pdo->prepare('SELECT * FROM email_verifications WHERE token = ?');
-        $stmt->execute(['$this->generateValidToken()']);
+        $stmt->execute([$validToken]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        $this->assertNotFalse($row);
+        $this->assertIsArray($row);
     }
 
     public function testHasRecentVerification(): void
     {
         // Insert recent verification
+        $recentToken = $this->generateValidToken();
         $recentTime = (new DateTime('-30 minutes'))->format('Y-m-d H:i:s');
         $this->pdo->exec("
             INSERT INTO email_verifications (id, user_id, token, expires_at, is_used, created_at)
             VALUES (
                 'recent-id', 
                 'user-id', 
-                '$this->generateValidToken()', 
+                '{$recentToken}', 
                 datetime('now', '+24 hours'), 
                 0, 
                 '{$recentTime}'
@@ -258,10 +267,11 @@ class EmailVerificationRepositoryTest extends TestCase
     public function testHasRecentVerificationWithOldVerification(): void
     {
         // Insert old verification
+        $oldToken = $this->generateValidToken();
         $oldTime = (new DateTime('-2 hours'))->format('Y-m-d H:i:s');
         $this->pdo->exec("
             INSERT INTO email_verifications (id, user_id, token, expires_at, is_used, created_at)
-            VALUES ('old-id', 'user-id', '$this->generateValidToken()', datetime('now', '+24 hours'), 0, '{$oldTime}')
+            VALUES ('old-id', 'user-id', '{$oldToken}', datetime('now', '+24 hours'), 0, '{$oldTime}')
         ");
 
         $this->assertFalse($this->repository->hasRecentVerification('user-id', 60)); // 60 minutes
@@ -270,12 +280,14 @@ class EmailVerificationRepositoryTest extends TestCase
     public function testDeleteByUserId(): void
     {
         // Insert multiple verifications for same user
+        $deleteToken1 = $this->generateValidToken();
+        $deleteToken2 = $this->generateValidToken();
         $expiresAt = (new DateTime('+24 hours'))->format('Y-m-d H:i:s');
         $this->pdo->exec("
             INSERT INTO email_verifications (id, user_id, token, expires_at, is_used)
             VALUES 
-                ('id1', 'user-id', '$this->generateValidToken()', '{$expiresAt}', 0),
-                ('id2', 'user-id', '$this->generateValidToken()', '{$expiresAt}', 0)
+                ('id1', 'user-id', '{$deleteToken1}', '{$expiresAt}', 0),
+                ('id2', 'user-id', '{$deleteToken2}', '{$expiresAt}', 0)
         ");
 
         $deletedCount = $this->repository->deleteByUserId('user-id');

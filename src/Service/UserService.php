@@ -87,13 +87,12 @@ class UserService extends AbstractService
         }
 
         // Marquer le token comme utilisé
-        $verification->markAsUsed();
-        $this->verificationRepository->markAsUsed($verification);
+        $this->verificationRepository->markAsUsed($token);
 
         // Activer et vérifier l'utilisateur
         $user->verify();
         $user->activate();
-        $this->userRepository->update($user);
+        $this->userRepository->updateUser($user);
 
         $this->log('info', 'Email verified successfully', [
             'user_id' => $user->getId(),
@@ -163,6 +162,7 @@ class UserService extends AbstractService
             throw new InvalidArgumentException('Current password is incorrect');
         }
 
+        $this->validatePassword($newPassword);
         $hashedNewPassword = $this->hashPassword($newPassword);
         $user->updatePassword($hashedNewPassword);
 

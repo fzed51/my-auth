@@ -18,6 +18,9 @@
 /coverage/
 coverage.txt
 
+# Code quality reports
+.phpcs-cache
+
 # IDE files
 .vscode/
 .idea/

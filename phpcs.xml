@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<ruleset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="MyAuth-Dist" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/squizlabs/PHP_CodeSniffer/master/phpcs.xsd">
+    <description>MyAuth Coding Standards - Distribution Configuration</description>
+
+    <!-- Configuration de base plus permissive pour les nouveaux développeurs -->
+    <arg name="report" value="summary"/>
+    <arg name="colors"/>
+    <arg value="p"/>
+
+    <!-- Répertoires à analyser -->
+    <file>src</file>
+
+    <!-- Exclure les répertoires -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/var/*</exclude-pattern>
+    <exclude-pattern>*/config/*</exclude-pattern>
+    <exclude-pattern>*/database/*</exclude-pattern>
+    <exclude-pattern>*/public/*</exclude-pattern>
+    <exclude-pattern>*/tests/*</exclude-pattern>
+
+    <!-- Standard de base : PSR-12 -->
+    <rule ref="PSR12"/>
+
+    <!-- Règles essentielles uniquement -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="80"/>
+            <property name="absoluteLineLimit" value="120"/>
+        </properties>
+    </rule>
+
+    <!-- Sécurité de base -->
+    <rule ref="Generic.PHP.ForbiddenFunctions">
+        <properties>
+            <property name="forbiddenFunctions" type="array">
+                <element key="eval" value="null"/>
+                <element key="create_function" value="null"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- Configuration pour PHP 8+ -->
+    <config name="php_version" value="80000"/>
+
+    <!-- Règles assouplies pour éviter trop d'erreurs -->
+    
+    <!-- Interdire les underscores dans les noms de méthodes (erreur) -->
+    <rule ref="PSR2.Methods.MethodDeclaration.Underscore">
+        <type>error</type>
+    </rule>
+    
+    <!-- Documentation optionnelle -->
+    <rule ref="Squiz.Commenting.FileComment.Missing">
+        <type>warning</type>
+    </rule>
+    
+    <rule ref="Squiz.Commenting.ClassComment.Missing">
+        <type>warning</type>
+    </rule>
+
+    <rule ref="Squiz.Commenting.FunctionComment.Missing">
+        <type>warning</type>
+    </rule>
+
+    <!-- Variables privées avec underscore: erreur -->
+    <rule ref="Squiz.NamingConventions.ValidVariableName.PrivateNoUnderscore">
+        <type>error</type>
+    </rule>
+    
+    <!-- Propriétés privées avec underscore: erreur -->
+    <rule ref="PSR2.Classes.PropertyDeclaration.Underscore">
+        <type>error</type>
+    </rule>
+
+</ruleset>

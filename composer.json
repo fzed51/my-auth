@@ -28,8 +28,8 @@
     },
     "scripts": {
         "test": "phpunit",
-        "cs": "phpcs --standard=PSR12 src/",
-        "cs-fix": "phpcbf --standard=PSR12 src/",
+        "cs": "phpcs",
+        "cs-fix": "phpcbf",
         "stan": "phpstan analyse src/ --level=max --memory-limit=512M",
         "quality": [
             "@cs",

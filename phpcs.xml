@@ -62,12 +62,12 @@
         <type>warning</type>
     </rule>
 
-    <!-- Variables privées avec underscore: erreur -->
+    <!-- Variables privées sans underscore (PSR-12) -->
     <rule ref="Squiz.NamingConventions.ValidVariableName.PrivateNoUnderscore">
-        <type>error</type>
+        <exclude-pattern>*</exclude-pattern>
     </rule>
     
-    <!-- Propriétés privées avec underscore: erreur -->
+    <!-- Propriétés privées sans underscore: erreur -->
     <rule ref="PSR2.Classes.PropertyDeclaration.Underscore">
         <type>error</type>
     </rule>

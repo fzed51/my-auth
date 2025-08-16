@@ -50,14 +50,14 @@ class AuthControllerTest extends TestCase
     /**
      * Mock object for UserService
      *
-     * @var UserService&MockObject 
+     * @var UserService&MockObject
      */
     private MockObject $userService;
 
     /**
      * Mock object for ResponseFactoryInterface
      *
-     * @var ResponseFactoryInterface&MockObject 
+     * @var ResponseFactoryInterface&MockObject
      */
     private MockObject $responseFactory;
 
@@ -71,21 +71,21 @@ class AuthControllerTest extends TestCase
     /**
      * Mock object for ServerRequestInterface
      *
-     * @var ServerRequestInterface&MockObject 
+     * @var ServerRequestInterface&MockObject
      */
     private MockObject $request;
 
     /**
      * Mock object for ResponseInterface
      *
-     * @var ResponseInterface&MockObject 
+     * @var ResponseInterface&MockObject
      */
     private MockObject $response;
 
     /**
      * Mock object for StreamInterface
      *
-     * @var StreamInterface&MockObject 
+     * @var StreamInterface&MockObject
      */
     private MockObject $stream;
 

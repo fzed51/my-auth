@@ -95,7 +95,8 @@ class AuthController
                     'success' => true,
                     'message' => 'User registered successfully. Please check your email to verify your account.',
                     'data' => $user->toPublicArray()
-                    ], JSON_THROW_ON_ERROR
+                    ],
+                    JSON_THROW_ON_ERROR
                 )
             );
 
@@ -136,7 +137,8 @@ class AuthController
                     'success' => true,
                     'message' => 'Email verified successfully. Your account is now active.',
                     'data' => $user->toPublicArray()
-                    ], JSON_THROW_ON_ERROR
+                    ],
+                    JSON_THROW_ON_ERROR
                 )
             );
 
@@ -180,7 +182,8 @@ class AuthController
                     [
                     'success' => true,
                     'message' => 'Verification email sent successfully. Please check your email.'
-                    ], JSON_THROW_ON_ERROR
+                    ],
+                    JSON_THROW_ON_ERROR
                 )
             );
 
@@ -213,7 +216,8 @@ class AuthController
                     [
                     'success' => true,
                     'data' => $user->toPublicArray()
-                    ], JSON_THROW_ON_ERROR
+                    ],
+                    JSON_THROW_ON_ERROR
                 )
             );
 
@@ -245,7 +249,8 @@ class AuthController
                     'success' => true,
                     'message' => 'Profile updated successfully',
                     'data' => $user->toPublicArray()
-                    ], JSON_THROW_ON_ERROR
+                    ],
+                    JSON_THROW_ON_ERROR
                 )
             );
 
@@ -285,7 +290,8 @@ class AuthController
                     [
                     'success' => true,
                     'message' => 'Password changed successfully'
-                    ], JSON_THROW_ON_ERROR
+                    ],
+                    JSON_THROW_ON_ERROR
                 )
             );
 
@@ -327,7 +333,8 @@ class AuthController
                 'error' => $error,
                 'message' => $message,
                 'code' => $statusCode
-                ], JSON_THROW_ON_ERROR
+                ],
+                JSON_THROW_ON_ERROR
             )
         );
 

@@ -75,7 +75,7 @@ function main(): void
     foreach ($filesToFormat as $file) {
         echo "🔄 Formatage de : $file\n";
         
-        $formatCommand = "php " . __DIR__ . "/format-php.php -f " . escapeshellarg($file) . " --in-place";
+        $formatCommand = "php -d error_reporting=\"E_ALL&~E_DEPRECATED\" " . __DIR__ . "/format-php.php -f " . escapeshellarg($file) . " --in-place";
         
         if ($noBackup) {
             $formatCommand .= " --no-backup";

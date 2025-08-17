@@ -2,7 +2,8 @@
 <?php
 
 /**
- * Script pour scanner les fichiers PHP et détecter ceux avec des lignes de plus de 80 caractères
+ * Script pour scanner les fichiers PHP et détecter ceux avec des lignes de plus
+ * de 80 caractères
  */
 
 class LongLineScanner
@@ -21,7 +22,10 @@ class LongLineScanner
     {
         $filesWithLongLines = [];
         $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($directory, RecursiveDirectoryIterator::SKIP_DOTS)
+            new RecursiveDirectoryIterator(
+                $directory,
+                RecursiveDirectoryIterator::SKIP_DOTS
+            )
         );
 
         foreach ($iterator as $file) {
@@ -69,7 +73,8 @@ class LongLineScanner
                 $longLines[] = [
                     'line' => $lineNumber + 1,
                     'length' => mb_strlen($line),
-                    'content' => mb_substr($line, 0, 100) . (mb_strlen($line) > 100 ? '...' : '')
+                    'content' => mb_substr($line, 0, 100)
+                        . (mb_strlen($line) > 100 ? '...' : '')
                 ];
             }
         }
@@ -80,14 +85,16 @@ class LongLineScanner
     public function displayResults(array $filesWithLongLines): void
     {
         if (empty($filesWithLongLines)) {
-            echo "✅ Aucun fichier avec des lignes dépassant " . self::MAX_LINE_LENGTH . " caractères trouvé.\n";
+            echo "✅ Aucun fichier avec des lignes dépassant " 
+                . self::MAX_LINE_LENGTH . " caractères trouvé.\n";
             return;
         }
 
-        echo "🔍 Fichiers avec des lignes dépassant " . self::MAX_LINE_LENGTH . " caractères :\n\n";
+        echo "🔍 Fichiers avec des lignes dépassant " . self::MAX_LINE_LENGTH 
+            . " caractères :\n\n";
         
         foreach ($filesWithLongLines as $filePath => $longLines) {
-            echo "📁 " . $filePath . "\n";
+            echo $filePath . "\n";
             foreach ($longLines as $lineInfo) {
                 echo sprintf(
                     "   Ligne %d (%d caractères): %s\n",
@@ -103,8 +110,12 @@ class LongLineScanner
         echo "   php bin/format-php.php <fichier>\n\n";
         
         echo "📊 Résumé :\n";
-        echo "   - " . count($filesWithLongLines) . " fichier(s) à reformater\n";
-        $totalLongLines = array_sum(array_map('count', $filesWithLongLines));
+        echo "   - " . count($filesWithLongLines) . " fichier(s) à "
+            ."reformater\n";
+        $totalLongLines = array_sum(array_map(
+            'count',
+            $filesWithLongLines
+        ));
         echo "   - " . $totalLongLines . " ligne(s) trop longue(s) au total\n";
     }
 
@@ -117,7 +128,10 @@ class LongLineScanner
 // Script principal
 function main(): void
 {
-    $options = getopt('d:h', ['directory:', 'help', 'files-only']);
+    $options = getopt(
+            'd:h', 
+            ['directory:', 'help', 'files-only']
+        );
     
     if (isset($options['h']) || isset($options['help'])) {
         showHelp();
@@ -143,7 +157,8 @@ function main(): void
     
     if ($fileOnly) {
         // Mode pour obtenir seulement la liste des fichiers (utile pour les scripts)
-        $filesToFormat = $scanner->getFilesToFormat($filesWithLongLines);
+        $filesToFormat = $scanner
+            ->getFilesToFormat($filesWithLongLines);
         foreach ($filesToFormat as $file) {
             echo $file . "\n";
         }
@@ -156,8 +171,10 @@ function showHelp(): void
 {
     echo "Usage: php bin/scan-long-lines.php [OPTIONS]\n\n";
     echo "Options :\n";
-    echo "  -d, --directory <dir>  Répertoire à scanner (défaut: répertoire courant)\n";
-    echo "  --files-only          Affiche seulement la liste des fichiers (sans détails)\n";
+    echo "  -d, --directory <dir>  Répertoire à scanner (défaut: répertoire "
+        . "courant)\n";
+    echo "  --files-only          Affiche seulement la liste des fichiers (sans "
+        . "détails)\n";
     echo "  -h, --help            Affiche cette aide\n\n";
     echo "Exemples :\n";
     echo "  php bin/scan-long-lines.php\n";

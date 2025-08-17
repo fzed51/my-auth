@@ -131,13 +131,17 @@ function main(): void
         exit(1);
     }
 
-    echo "🔍 Scan des fichiers PHP dans : $directory\n";
-    echo "📏 Limite de longueur : 80 caractères\n\n";
+    $fileOnly = !! ($options['files-only'] ?? false);
+
+    if (!$fileOnly) {
+        echo "🔍 Scan des fichiers PHP dans : $directory\n";
+        echo "📏 Limite de longueur : 80 caractères\n\n";
+    }
 
     $scanner = new LongLineScanner();
     $filesWithLongLines = $scanner->scanDirectory($directory);
     
-    if (isset($options['files-only'])) {
+    if ($fileOnly) {
         // Mode pour obtenir seulement la liste des fichiers (utile pour les scripts)
         $filesToFormat = $scanner->getFilesToFormat($filesWithLongLines);
         foreach ($filesToFormat as $file) {

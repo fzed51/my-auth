@@ -27,10 +27,12 @@
         }
     },
     "scripts": {
-        "test": "phpunit",
+        "test": "php -d error_reporting=\"E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED\" ./vendor/bin/phpunit",
         "cs": "phpcs",
         "cs-fix": "phpcbf",
         "stan": "phpstan analyse src/ --level=max --memory-limit=512M",
+        "scan-long-lines": "php bin/scan-long-lines.php",
+        "auto-format": "php bin/auto-format.php",
         "quality": [
             "@cs",
             "@stan",

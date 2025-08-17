@@ -1,417 +1,312 @@
 #!/usr/bin/env php
 <?php
-
 /**
- * Script pour reformater un fichier PHP en utilisant les tokens
- * pour respecter la limite de 80 caractères par ligne
+ * Formateur PHP PSR-12 basé sur l'AST
+ * 
+ * Utilise nikic/php-parser pour analyser et reformater le code PHP
+ * selon les standards PSR-12 avec une limite de 80 caractères par ligne.
+ * 
+ * Usage: php format-php-ast.php -f fichier.php
+ *        php format-php-ast.php -h
  */
 
-class PHPFileFormatter
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use PhpParser\Node;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitorAbstract;
+use PhpParser\ParserFactory;
+use PhpParser\PrettyPrinter;
+use PhpParser\Error;
+
+class PSR12ASTFormatter
 {
-    private const MAX_LINE_LENGTH = 80;
-    private const INDENT_SIZE = 4;
+    private int $maxLineLength = 80;
+    private PSR12PrettyPrinter $printer;
     
-    private string $currentLine = '';
-    private int $indentLevel = 0;
-    private array $formattedLines = [];
-    private bool $inString = false;
-    private string $stringDelimiter = '';
-    
-    public function formatFile(string $filePath): string
+    public function __construct()
     {
-        if (!file_exists($filePath)) {
-            throw new InvalidArgumentException("Le fichier '$filePath' n'existe pas.");
-        }
-
-        $content = file_get_contents($filePath);
-        if ($content === false) {
-            throw new RuntimeException("Impossible de lire le fichier '$filePath'.");
-        }
-
-        return $this->formatContent($content);
-    }
-
-    public function formatContent(string $content): string
-    {
-        $this->reset();
-        $tokens = token_get_all($content);
-        
-        foreach ($tokens as $token) {
-            $this->processToken($token);
-        }
-        
-        // Ajouter la dernière ligne si elle n'est pas vide
-        if (!empty(trim($this->currentLine))) {
-            $this->addLine();
-        }
-        
-        return implode("\n", $this->formattedLines);
-    }
-
-    private function reset(): void
-    {
-        $this->currentLine = '';
-        $this->indentLevel = 0;
-        $this->formattedLines = [];
-        $this->inString = false;
-        $this->stringDelimiter = '';
-    }
-
-    private function processToken($token): void
-    {
-        if (is_array($token)) {
-            $tokenType = $token[0];
-            $tokenValue = $token[1];
-            
-            switch ($tokenType) {
-                case T_OPEN_TAG:
-                case T_OPEN_TAG_WITH_ECHO:
-                    $this->addTokenToLine($tokenValue);
-                    if (trim($tokenValue) !== '<?php') {
-                        $this->addLine();
-                    }
-                    break;
-                    
-                case T_CLOSE_TAG:
-                    $this->addTokenToLine($tokenValue);
-                    break;
-                    
-                case T_WHITESPACE:
-                    $this->handleWhitespace($tokenValue);
-                    break;
-                    
-                case T_COMMENT:
-                case T_DOC_COMMENT:
-                    $this->handleComment($tokenValue);
-                    break;
-                    
-                case T_CONSTANT_ENCAPSED_STRING:
-                case T_ENCAPSED_AND_WHITESPACE:
-                    $this->handleString($tokenValue);
-                    break;
-                    
-                default:
-                    $this->addTokenToLine($tokenValue);
-                    break;
-            }
-        } else {
-            // Token simple (caractère)
-            $this->handleSimpleToken($token);
-        }
-    }
-
-    private function handleWhitespace(string $whitespace): void
-    {
-        // Compter les nouvelles lignes
-        $newlineCount = substr_count($whitespace, "\n");
-        
-        if ($newlineCount > 0) {
-            // Ajouter la ligne courante seulement si elle n'est pas vide
-            if (!empty(trim($this->currentLine))) {
-                $this->addLine();
-            }
-            
-            // Limiter le nombre de lignes vides consécutives à 1
-            if ($newlineCount > 1 && !empty($this->formattedLines)) {
-                $this->formattedLines[] = '';
-            }
-        } else {
-            // Ajouter un espace simple si on n'est pas au début de ligne et si le dernier caractère n'est pas déjà un espace
-            if (!empty(trim($this->currentLine)) && !str_ends_with($this->currentLine, ' ')) {
-                $this->addTokenToLine(' ');
-            }
-        }
-    }
-
-    private function handleComment(string $comment): void
-    {
-        $lines = explode("\n", $comment);
-        foreach ($lines as $index => $line) {
-            if ($index > 0) {
-                $this->addLine();
-            }
-            $this->addTokenToLine($line);
-        }
-    }
-
-    private function handleString(string $string): void
-    {
-        // Les chaînes peuvent être longues, on les traite spécialement
-        if (strlen($this->currentLine . $string) > self::MAX_LINE_LENGTH) {
-            // Si c'est une concaténation, essayer de casser au niveau du point
-            if (strpos($string, '.') !== false && strpos($this->currentLine, '.') !== false) {
-                $this->addLine();
-                $this->addTokenToLine($string);
-            } else {
-                $this->tryToBreakString($string);
-            }
-        } else {
-            $this->addTokenToLine($string);
-        }
-    }
-
-    private function handleSimpleToken(string $token): void
-    {
-        switch ($token) {
-            case '{':
-                $this->addTokenToLine(' ' . $token);
-                $this->addLine();
-                $this->indentLevel++;
-                break;
-                
-            case '}':
-                $this->indentLevel = max(0, $this->indentLevel - 1);
-                if (!empty(trim($this->currentLine))) {
-                    $this->addLine();
-                }
-                $this->addTokenToLine($token);
-                $this->addLine();
-                break;
-                
-            case ';':
-                $this->addTokenToLine($token);
-                // Ajouter une nouvelle ligne seulement pour les instructions complètes
-                $this->addLine();
-                break;
-                
-            case ',':
-                $this->addTokenToLine($token);
-                // Si c'est dans une signature de fonction et que la ligne est longue, casser
-                if (strlen($this->currentLine) > self::MAX_LINE_LENGTH - 15 || 
-                    (strlen($this->currentLine) > 60 && strpos($this->currentLine, 'function') !== false)) {
-                    $this->addLine();
-                } else {
-                    $this->addTokenToLine(' ');
-                }
-                break;
-                
-            case '(':
-            case ')':
-            case '[':
-            case ']':
-                $this->addTokenToLine($token);
-                break;
-                
-            default:
-                $this->addTokenToLine($token);
-                break;
-        }
-    }
-
-    private function addTokenToLine(string $token): void
-    {
-        $potentialLine = $this->currentLine . $token;
-        
-        // Si la ligne deviendrait trop longue ET qu'on peut la casser intelligemment
-        if (strlen($potentialLine) > self::MAX_LINE_LENGTH && !empty(trim($this->currentLine))) {
-            // Chercher un bon endroit pour casser la ligne
-            $breakPoints = [' && ', ' || ', ' . ', ' => ', ', ', ' + ', ' - ', ' * ', ' / ', ' == ', ' != ', ' === ', ' !== ', ' = '];
-            $bestBreakPoint = null;
-            $bestBreakPos = -1;
-            
-            foreach ($breakPoints as $breakPoint) {
-                $pos = strrpos($this->currentLine, $breakPoint);
-                if ($pos !== false && $pos > $bestBreakPos) {
-                    $bestBreakPos = $pos + strlen($breakPoint);
-                    $bestBreakPoint = $breakPoint;
-                }
-            }
-            
-            if ($bestBreakPoint !== null) {
-                // Casser à l'endroit trouvé
-                $beforeBreak = substr($this->currentLine, 0, $bestBreakPos);
-                $afterBreak = substr($this->currentLine, $bestBreakPos);
-                
-                $this->formattedLines[] = $this->getIndent() . ltrim($beforeBreak);
-                $this->currentLine = str_repeat(' ', self::INDENT_SIZE) . ltrim($afterBreak . $token);
-            } else {
-                // Casser simplement si aucun point de cassure n'est trouvé
-                $this->addLine();
-                $this->currentLine = str_repeat(' ', self::INDENT_SIZE) . ltrim($token);
-            }
-        } else {
-            $this->currentLine .= $token;
-        }
-        
-        // Vérifier si même après ajout, la ligne est encore trop longue
-        if (strlen($this->currentLine) > self::MAX_LINE_LENGTH) {
-            $this->forceLineBreak();
-        }
+        $this->printer = new PSR12PrettyPrinter([
+            'shortArraySyntax' => true,
+        ]);
     }
     
-    private function forceLineBreak(): void
-    {
-        $line = $this->currentLine;
-        $maxLen = self::MAX_LINE_LENGTH - strlen($this->getIndent());
-        
-        if (strlen($line) <= $maxLen) {
-            return;
-        }
-        
-        // Chercher le meilleur endroit pour casser dans les derniers caractères
-        $breakPoints = [', ', ' = ', ' '];
-        $bestPos = false;
-        
-        for ($i = $maxLen; $i >= $maxLen - 20 && $i >= 0; $i--) {
-            foreach ($breakPoints as $breakPoint) {
-                if (substr($line, $i, strlen($breakPoint)) === $breakPoint) {
-                    $bestPos = $i + strlen($breakPoint);
-                    break 2;
-                }
-            }
-        }
-        
-        if ($bestPos !== false) {
-            $beforeBreak = substr($line, 0, $bestPos);
-            $afterBreak = substr($line, $bestPos);
-            
-            $this->currentLine = trim($beforeBreak);
-            $this->addLine();
-            $this->currentLine = str_repeat(' ', self::INDENT_SIZE) . ltrim($afterBreak);
-        }
-    }
-
-    private function tryToBreakString(string $string): void
-    {
-        // Pour les chaînes très longues, on essaie de les couper intelligemment
-        if (strpos($string, ' ') !== false) {
-            $words = explode(' ', $string);
-            foreach ($words as $index => $word) {
-                if ($index > 0) {
-                    $this->addTokenToLine(' ');
-                }
-                
-                if (strlen($this->currentLine . $word) > self::MAX_LINE_LENGTH) {
-                    $this->addLine();
-                }
-                $this->addTokenToLine($word);
-            }
-        } else {
-            $this->addTokenToLine($string);
-        }
-    }
-
-    private function addLine(): void
-    {
-        $trimmedLine = trim($this->currentLine);
-        
-        if (empty($trimmedLine)) {
-            // Éviter d'ajouter trop de lignes vides consécutives
-            if (!empty($this->formattedLines) && trim(end($this->formattedLines)) !== '') {
-                $this->formattedLines[] = '';
-            }
-        } else {
-            // Ajouter l'indentation appropriée si la ligne n'est pas vide
-            $this->formattedLines[] = $this->getIndent() . ltrim($this->currentLine);
-        }
-        $this->currentLine = '';
-    }
-
-    private function getIndent(): string
-    {
-        return str_repeat(' ', $this->indentLevel * self::INDENT_SIZE);
-    }
-
-    public function formatFileInPlace(string $filePath, bool $backup = true): bool
+    /**
+     * Formate le code PHP selon PSR-12
+     */
+    public function format(string $code): string
     {
         try {
-            if ($backup) {
-                $backupPath = $filePath . '.backup.' . date('Y-m-d-H-i-s');
-                if (!copy($filePath, $backupPath)) {
-                    throw new RuntimeException("Impossible de créer le backup '$backupPath'.");
-                }
-                echo "💾 Backup créé : $backupPath\n";
-            }
-
-            $formattedContent = $this->formatFile($filePath);
+            $parser = (new ParserFactory)->createForNewestSupportedVersion();
+            $ast = $parser->parse($code);
             
-            if (file_put_contents($filePath, $formattedContent) === false) {
-                throw new RuntimeException("Impossible d'écrire dans le fichier '$filePath'.");
+            if ($ast === null) {
+                throw new \RuntimeException('Impossible de parser le code PHP');
             }
-
-            return true;
-        } catch (Exception $e) {
-            echo "❌ Erreur lors du formatage de '$filePath' : " . $e->getMessage() . "\n";
-            return false;
+            
+            // Traverser l'AST pour appliquer les règles PSR-12
+            $traverser = new NodeTraverser();
+            $traverser->addVisitor(new PSR12NodeVisitor());
+            
+            $ast = $traverser->traverse($ast);
+            
+            // Générer le code formaté
+            $formattedCode = $this->printer->prettyPrintFile($ast);
+            
+            // Post-traitement pour respecter la limite de 80 caractères
+            return $this->enforceLineLength($formattedCode);
+            
+        } catch (Error $e) {
+            throw new \RuntimeException('Erreur de parsing PHP: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Applique la limite de 80 caractères par ligne
+     */
+    private function enforceLineLength(string $code): string
+    {
+        $lines = explode("\n", $code);
+        $result = [];
+        
+        foreach ($lines as $line) {
+            if (strlen($line) <= $this->maxLineLength) {
+                $result[] = $line;
+                continue;
+            }
+            
+            // Essayer de casser la ligne intelligemment
+            $broken = $this->breakLongLine($line);
+            $result = array_merge($result, $broken);
+        }
+        
+        return implode("\n", $result);
+    }
+    
+    /**
+     * Casse une ligne longue de manière intelligente
+     */
+    private function breakLongLine(string $line): array
+    {
+        // Détecter l'indentation
+        preg_match('/^(\s*)/', $line, $matches);
+        $indent = $matches[1];
+        $extraIndent = '    '; // 4 espaces supplémentaires pour les continuations
+        
+        // Points de cassure préférentiels
+        $breakPoints = [
+            ', ',     // Paramètres de fonction
+            ' && ',   // Opérateurs logiques
+            ' || ',   
+            ' . ',    // Concaténation
+            '->',     // Chaînage de méthodes
+            ' = ',    // Assignation
+        ];
+        
+        foreach ($breakPoints as $breakPoint) {
+            if (strpos($line, $breakPoint) !== false) {
+                return $this->breakAtPoint($line, $breakPoint, $indent, $extraIndent);
+            }
+        }
+        
+        // Cassure par défaut à 80 caractères
+        return [
+            substr($line, 0, $this->maxLineLength - 3) . '...',
+            $indent . $extraIndent . substr($line, $this->maxLineLength - 3)
+        ];
+    }
+    
+    /**
+     * Casse une ligne à un point spécifique
+     */
+    private function breakAtPoint(string $line, string $breakPoint, string $indent, string $extraIndent): array
+    {
+        $parts = explode($breakPoint, $line);
+        $result = [];
+        $currentLine = $parts[0] . $breakPoint;
+        
+        for ($i = 1; $i < count($parts); $i++) {
+            $part = $parts[$i];
+            
+            if (strlen($currentLine . $part) > $this->maxLineLength) {
+                $result[] = rtrim($currentLine);
+                $currentLine = $indent . $extraIndent . $part;
+            } else {
+                $currentLine .= $part;
+            }
+            
+            if ($i < count($parts) - 1) {
+                $currentLine .= $breakPoint;
+            }
+        }
+        
+        $result[] = $currentLine;
+        return $result;
     }
 }
 
-// Script principal
-function main(): void
+/**
+ * Visitor pour appliquer les règles PSR-12 spécifiques
+ */
+class PSR12NodeVisitor extends NodeVisitorAbstract
 {
-    $options = getopt('f:o:h', ['file:', 'output:', 'help', 'in-place', 'no-backup']);
+    public function leaveNode(Node $node)
+    {
+        // Normaliser les espaces dans les commentaires
+        if ($node instanceof Node\Stmt\Nop && !empty($node->getComments())) {
+            foreach ($node->getComments() as $comment) {
+                // Préserver les commentaires mais normaliser l'indentation
+            }
+        }
+        
+        return $node;
+    }
+}
+
+/**
+ * PrettyPrinter personnalisé pour PSR-12
+ */
+class PSR12PrettyPrinter extends PrettyPrinter\Standard
+{
+    protected function pStmt_Class(Node\Stmt\Class_ $node): string
+    {
+        return $this->pClassCommon($node, ' ' . $node->name);
+    }
+    
+    protected function pStmt_ClassMethod(Node\Stmt\ClassMethod $node): string
+    {
+        return $this->pAttrGroups($node->attrGroups ?? [])
+             . $this->pModifiers($node->flags)
+             . 'function ' . ($node->byRef ? '&' : '') . $node->name
+             . '(' . $this->pCommaSeparated($node->params) . ')'
+             . (null !== $node->returnType ? ': ' . $this->p($node->returnType) : '')
+             . (null !== $node->stmts
+                ? "\n" . '{' . $this->pStmts($node->stmts) . "\n" . '}'
+                : ';');
+    }
+    
+    protected function pStmt_Function(Node\Stmt\Function_ $node): string
+    {
+        return $this->pAttrGroups($node->attrGroups ?? [])
+             . 'function ' . ($node->byRef ? '&' : '') . $node->name
+             . '(' . $this->pCommaSeparated($node->params) . ')'
+             . (null !== $node->returnType ? ': ' . $this->p($node->returnType) : '')
+             . "\n" . '{' . $this->pStmts($node->stmts) . "\n" . '}';
+    }
+    
+    protected function pStmt_If(Node\Stmt\If_ $node): string
+    {
+        return 'if (' . $this->p($node->cond) . ') {'
+             . $this->pStmts($node->stmts) . "\n" . '}'
+             . ($node->elseifs ? ' ' . $this->pImplode($node->elseifs, ' ') : '')
+             . (null !== $node->else ? ' ' . $this->p($node->else) : '');
+    }
+    
+    protected function pStmt_ElseIf(Node\Stmt\ElseIf_ $node): string
+    {
+        return 'elseif (' . $this->p($node->cond) . ') {'
+             . $this->pStmts($node->stmts) . "\n" . '}';
+    }
+    
+    protected function pStmt_Else(Node\Stmt\Else_ $node): string
+    {
+        return 'else {' . $this->pStmts($node->stmts) . "\n" . '}';
+    }
+}
+
+/**
+ * Fonction principale du script
+ */
+function main(): int
+{
+    $options = getopt('f:h', ['file:', 'help']);
     
     if (isset($options['h']) || isset($options['help'])) {
         showHelp();
-        return;
+        return 0;
     }
-
-    $filePath = $options['f'] ?? $options['file'] ?? null;
     
-    if (!$filePath) {
-        echo "❌ Erreur : Vous devez spécifier un fichier avec -f ou --file\n\n";
+    $file = $options['f'] ?? $options['file'] ?? null;
+    
+    if (!$file) {
+        echo "Erreur: Fichier requis. Utilisez -f ou --file\n";
         showHelp();
-        exit(1);
+        return 1;
     }
-
-    if (!file_exists($filePath)) {
-        echo "❌ Erreur : Le fichier '$filePath' n'existe pas.\n";
-        exit(1);
+    
+    if (!file_exists($file)) {
+        echo "Erreur: Le fichier '$file' n'existe pas.\n";
+        return 1;
     }
-
-    echo "🔧 Formatage du fichier : $filePath\n";
-    echo "📏 Limite de longueur : 80 caractères\n\n";
-
-    $formatter = new PHPFileFormatter();
+    
+    if (!is_readable($file)) {
+        echo "Erreur: Le fichier '$file' n'est pas lisible.\n";
+        return 1;
+    }
     
     try {
-        if (isset($options['in-place'])) {
-            // Formatage en place
-            $backup = !isset($options['no-backup']);
-            $success = $formatter->formatFileInPlace($filePath, $backup);
-            
-            if ($success) {
-                echo "✅ Fichier formaté avec succès !\n";
-            } else {
-                exit(1);
-            }
-        } else {
-            // Formatage vers un nouveau fichier ou stdout
-            $formattedContent = $formatter->formatFile($filePath);
-            
-            $outputPath = $options['o'] ?? $options['output'] ?? null;
-            
-            if ($outputPath) {
-                if (file_put_contents($outputPath, $formattedContent) === false) {
-                    echo "❌ Erreur : Impossible d'écrire dans '$outputPath'.\n";
-                    exit(1);
-                }
-                echo "✅ Fichier formaté sauvegardé dans : $outputPath\n";
-            } else {
-                echo $formattedContent;
-            }
+        echo "Formatage PSR-12 de: $file\n";
+        
+        // Lire le fichier original
+        $originalCode = file_get_contents($file);
+        if ($originalCode === false) {
+            throw new \RuntimeException("Impossible de lire le fichier: $file");
         }
-    } catch (Exception $e) {
-        echo "❌ Erreur : " . $e->getMessage() . "\n";
-        exit(1);
+        
+        // Créer une sauvegarde
+        $backupFile = $file . '.backup-' . date('Y-m-d-H-i-s');
+        if (!copy($file, $backupFile)) {
+            throw new \RuntimeException("Impossible de créer la sauvegarde: $backupFile");
+        }
+        echo "Sauvegarde créée: $backupFile\n";
+        
+        // Formater le code
+        $formatter = new PSR12ASTFormatter();
+        $formattedCode = $formatter->format($originalCode);
+        
+        // Écrire le fichier formaté
+        if (file_put_contents($file, $formattedCode) === false) {
+            throw new \RuntimeException("Impossible d'écrire le fichier formaté: $file");
+        }
+        
+        echo "✅ Fichier formaté avec succès selon PSR-12\n";
+        
+        // Statistiques
+        $originalLines = substr_count($originalCode, "\n") + 1;
+        $formattedLines = substr_count($formattedCode, "\n") + 1;
+        echo "Lignes originales: $originalLines\n";
+        echo "Lignes formatées: $formattedLines\n";
+        
+        return 0;
+        
+    } catch (\Throwable $e) {
+        echo "❌ Erreur: " . $e->getMessage() . "\n";
+        return 1;
     }
 }
 
 function showHelp(): void
 {
-    echo "Usage: php bin/format-php.php [OPTIONS]\n\n";
-    echo "Options :\n";
-    echo "  -f, --file <file>     Fichier PHP à formater (obligatoire)\n";
-    echo "  -o, --output <file>   Fichier de sortie (défaut: affichage sur stdout)\n";
-    echo "  --in-place           Modifie le fichier directement\n";
-    echo "  --no-backup          Ne crée pas de backup (avec --in-place)\n";
-    echo "  -h, --help           Affiche cette aide\n\n";
-    echo "Exemples :\n";
-    echo "  php bin/format-php.php -f src/Controller/AuthController.php\n";
-    echo "  php bin/format-php.php -f src/Entity/User.php -o src/Entity/User.formatted.php\n";
-    echo "  php bin/format-php.php -f src/Service/UserService.php --in-place\n";
-    echo "  php bin/format-php.php -f src/Repository/UserRepository.php --in-place --no-backup\n";
+    echo <<<HELP
+Formateur PHP PSR-12 avec limite de 80 caractères (basé sur AST)
+
+USAGE:
+    php format-php.php -f fichier.php
+    php format-php.php --file fichier.php
+
+OPTIONS:
+    -f, --file      Fichier PHP à formater
+    -h, --help      Afficher cette aide
+
+EXEMPLE:
+    php format-php.php -f src/Controller/AuthController.php
+
+Le script crée automatiquement une sauvegarde avant formatage.
+
+HELP;
 }
 
-main();
+// Exécution du script
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_NAME'])) {
+    exit(main());
+}

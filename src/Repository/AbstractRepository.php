@@ -28,6 +28,12 @@ abstract class AbstractRepository
     /**
      * Constructeur du repository
      */
+    /**
+
+     * Constructor
+
+     */
+
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
@@ -346,6 +352,16 @@ abstract class AbstractRepository
     /**
      * Getter pour le nom de la table
      */
+    /**
+
+     * Get the tableName
+
+     *
+
+     * @return string
+
+     */
+
     public function getTableName(): string
     {
         return $this->tableName;
@@ -354,6 +370,16 @@ abstract class AbstractRepository
     /**
      * Getter pour la clé primaire
      */
+    /**
+
+     * Get the primaryKey
+
+     *
+
+     * @return string
+
+     */
+
     public function getPrimaryKey(): string
     {
         return $this->primaryKey;

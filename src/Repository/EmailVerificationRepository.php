@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Repository Class for MyAuth
+ *
+ * @package MyAuth\Repository
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Repository;
@@ -11,6 +18,21 @@ use MyAuth\Exception\EmailVerificationException;
 class EmailVerificationRepository extends AbstractRepository
 {
     protected string $tableName = 'email_verifications';
+
+    /**
+
+
+     * Get the tableName
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
 
     public function getTableName(): string
     {

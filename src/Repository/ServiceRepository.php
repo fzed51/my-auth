@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Service Class for MyAuth
+ *
+ * @package MyAuth\Repository
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Repository;
@@ -17,6 +24,15 @@ class ServiceRepository
 {
     private string $servicesConfigPath;
     private ?array $servicesCache = null;
+
+    /**
+
+
+     * Constructor
+
+
+     */
+
 
     public function __construct(string $servicesConfigPath)
     {

@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Service Class for MyAuth
+ *
+ * @package MyAuth\Entity
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Entity;
@@ -19,6 +26,15 @@ class Service
     private ?\DateTime $createdAt;
     private ?\DateTime $updatedAt;
 
+    /**
+
+
+     * Constructor
+
+
+     */
+
+
     public function __construct(
         string $id,
         string $name,
@@ -28,6 +44,8 @@ class Service
         array $allowedOrigins = [],
         int $rateLimitPerMinute = 60
     ) {
+
+
         $this->id = $id;
         $this->name = $name;
         $this->apiKey = $apiKey;
@@ -39,30 +57,120 @@ class Service
         $this->updatedAt = new \DateTime();
     }
 
+    /**
+
+
+     * Get the id
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
+
     public function getId(): string
     {
         return $this->id;
     }
+
+    /**
+
+
+     * Get the name
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
 
     public function getName(): string
     {
         return $this->name;
     }
 
+    /**
+
+
+     * Get the apiKey
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
+
     public function getApiKey(): string
     {
         return $this->apiKey;
     }
+
+    /**
+
+
+     * Get the description
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
 
     public function getDescription(): string
     {
         return $this->description;
     }
 
+    /**
+
+
+     * Check if active
+
+
+     *
+
+
+     * @return bool
+
+
+     */
+
+
     public function isActive(): bool
     {
         return $this->isActive;
     }
+
+    /**
+
+
+     * Set the active
+
+
+     *
+
+
+     * @param bool $isActive
+
+
+     */
+
 
     public function setActive(bool $isActive): void
     {
@@ -70,10 +178,40 @@ class Service
         $this->updatedAt = new \DateTime();
     }
 
+    /**
+
+
+     * Get the allowedOrigins
+
+
+     *
+
+
+     * @return array
+
+
+     */
+
+
     public function getAllowedOrigins(): array
     {
         return $this->allowedOrigins;
     }
+
+    /**
+
+
+     * Set the allowedOrigins
+
+
+     *
+
+
+     * @param array $allowedOrigins
+
+
+     */
+
 
     public function setAllowedOrigins(array $allowedOrigins): void
     {
@@ -81,10 +219,40 @@ class Service
         $this->updatedAt = new \DateTime();
     }
 
+    /**
+
+
+     * Get the rateLimitPerMinute
+
+
+     *
+
+
+     * @return int
+
+
+     */
+
+
     public function getRateLimitPerMinute(): int
     {
         return $this->rateLimitPerMinute;
     }
+
+    /**
+
+
+     * Set the rateLimitPerMinute
+
+
+     *
+
+
+     * @param int $rateLimitPerMinute
+
+
+     */
+
 
     public function setRateLimitPerMinute(int $rateLimitPerMinute): void
     {
@@ -92,10 +260,40 @@ class Service
         $this->updatedAt = new \DateTime();
     }
 
+    /**
+
+
+     * Get the createdAt
+
+
+     *
+
+
+     * @return ?\DateTime
+
+
+     */
+
+
     public function getCreatedAt(): ?\DateTime
     {
         return $this->createdAt;
     }
+
+    /**
+
+
+     * Get the updatedAt
+
+
+     *
+
+
+     * @return ?\DateTime
+
+
+     */
+
 
     public function getUpdatedAt(): ?\DateTime
     {

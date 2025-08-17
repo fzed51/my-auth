@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Middleware d'authentification par API Key pour MyAuth
+ *
+ * @package MyAuth\Middleware
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Middleware;
@@ -26,18 +33,41 @@ class ApiKeyMiddleware implements MiddlewareInterface
     private ResponseFactoryInterface $responseFactory;
     private array $publicRoutes;
 
+    /**
+     * Constructeur du middleware d'authentification API Key
+     *
+     * @param ServiceAuthService $serviceAuthService Service d'authentification
+     * @param ResponseFactoryInterface $responseFactory Factory de réponses HTTP
+     * @param array $publicRoutes Routes publiques sans authentification
+     */
+    /**
+
+     * Constructor
+
+     */
+
     public function __construct(
         ServiceAuthService $serviceAuthService,
         ResponseFactoryInterface $responseFactory,
         array $publicRoutes = []
     ) {
+
         $this->serviceAuthService = $serviceAuthService;
         $this->responseFactory = $responseFactory;
         $this->publicRoutes = $publicRoutes;
     }
 
-    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-    {
+    /**
+     * Traite la requête HTTP et vérifie l'authentification API Key
+     *
+     * @param ServerRequestInterface $request Requête HTTP
+     * @param RequestHandlerInterface $handler Gestionnaire de requête
+     * @return ResponseInterface Réponse HTTP
+     */
+    public function process(
+        ServerRequestInterface $request,
+        RequestHandlerInterface $handler
+    ): ResponseInterface {
         $uri = $request->getUri();
         $path = $uri->getPath();
 
@@ -50,7 +80,11 @@ class ApiKeyMiddleware implements MiddlewareInterface
             // Récupération de l'API key
             $apiKey = $this->extractApiKey($request);
             if ($apiKey === null) {
-                return $this->createErrorResponse(401, 'API key manquante', 'API_KEY_MISSING');
+                return $this->createErrorResponse(
+                    401,
+                    'API key manquante',
+                    'API_KEY_MISSING'
+                );
             }
 
             // Authentification du service
@@ -63,19 +97,37 @@ class ApiKeyMiddleware implements MiddlewareInterface
             }
 
             // Injection du service dans la requête
-            $request = $request->withAttribute('authenticated_service', $service);
+            $request = $request->withAttribute(
+                'authenticated_service',
+                $service
+            );
             $request = $request->withAttribute('service_id', $service->getId());
-            $request = $request->withAttribute('service_name', $service->getName());
+            $request = $request->withAttribute(
+                'service_name',
+                $service->getName()
+            );
 
             return $handler->handle($request);
         } catch (AuthenticationException $e) {
-            return $this->createErrorResponse(401, $e->getMessage(), 'AUTHENTICATION_FAILED');
+            return $this->createErrorResponse(
+                401,
+                $e->getMessage(),
+                'AUTHENTICATION_FAILED'
+            );
         } catch (AuthorizationException $e) {
-            return $this->createErrorResponse(403, $e->getMessage(), 'AUTHORIZATION_FAILED');
+            return $this->createErrorResponse(
+                403,
+                $e->getMessage(),
+                'AUTHORIZATION_FAILED'
+            );
         } catch (\Exception $e) {
             // Log de l'erreur pour debug
             error_log("ApiKeyMiddleware error: " . $e->getMessage());
-            return $this->createErrorResponse(500, 'Erreur interne du serveur', 'INTERNAL_SERVER_ERROR');
+            return $this->createErrorResponse(
+                500,
+                'Erreur interne du serveur',
+                'INTERNAL_SERVER_ERROR'
+            );
         }
     }
 
@@ -92,11 +144,14 @@ class ApiKeyMiddleware implements MiddlewareInterface
 
         // Vérification dans le header Authorization (Bearer)
         $authorization = $request->getHeaderLine('Authorization');
-        if (!empty($authorization) && str_starts_with($authorization, 'Bearer ')) {
+        if (
+            !empty($authorization)
+            && str_starts_with($authorization, 'Bearer ')
+        ) {
             return substr($authorization, 7);
         }
 
-        // Vérification dans les paramètres de requête (moins sécurisé, pour debug uniquement)
+        // Vérification dans les paramètres de requête (debug uniquement)
         $queryParams = $request->getQueryParams();
         if (isset($queryParams['api_key']) && !empty($queryParams['api_key'])) {
             return $queryParams['api_key'];
@@ -110,10 +165,15 @@ class ApiKeyMiddleware implements MiddlewareInterface
      */
     private function isPublicRoute(string $path): bool
     {
-        error_log("Checking if path '{$path}' is public against routes: " . json_encode($this->publicRoutes));
+        error_log(
+            "Checking if path '{$path}' is public against routes: " .
+            json_encode($this->publicRoutes)
+        );
         foreach ($this->publicRoutes as $publicRoute) {
             if ($this->matchRoute($path, $publicRoute)) {
-                error_log("Path '{$path}' matches public route '{$publicRoute}'");
+                error_log(
+                    "Path '{$path}' matches public route '{$publicRoute}'"
+                );
                 return true;
             }
         }
@@ -144,8 +204,11 @@ class ApiKeyMiddleware implements MiddlewareInterface
     /**
      * Crée une réponse d'erreur JSON
      */
-    private function createErrorResponse(int $statusCode, string $message, string $errorCode): ResponseInterface
-    {
+    private function createErrorResponse(
+        int $statusCode,
+        string $message,
+        string $errorCode
+    ): ResponseInterface {
         $response = $this->responseFactory->createResponse($statusCode);
 
         $errorData = [
@@ -157,7 +220,9 @@ class ApiKeyMiddleware implements MiddlewareInterface
 
         $jsonContent = json_encode($errorData, JSON_PRETTY_PRINT);
         if ($jsonContent === false) {
-            throw new \RuntimeException('Failed to encode error response to JSON');
+            throw new \RuntimeException(
+                'Failed to encode error response to JSON'
+            );
         }
 
         $response->getBody()->write($jsonContent);
@@ -166,7 +231,8 @@ class ApiKeyMiddleware implements MiddlewareInterface
     }
 
     /**
-     * Factory method pour créer le middleware avec des routes publiques par défaut
+     * Factory method pour créer le middleware avec des routes publiques
+     * par défaut
      */
     public static function withDefaultPublicRoutes(
         ServiceAuthService $serviceAuthService,
@@ -184,7 +250,11 @@ class ApiKeyMiddleware implements MiddlewareInterface
             '/api/status*',
         ];
 
-        return new self($serviceAuthService, $responseFactory, $defaultPublicRoutes);
+        return new self(
+            $serviceAuthService,
+            $responseFactory,
+            $defaultPublicRoutes
+        );
     }
 
     /**
@@ -200,8 +270,9 @@ class ApiKeyMiddleware implements MiddlewareInterface
     /**
      * Récupère le service authentifié depuis la requête
      */
-    public static function getAuthenticatedService(ServerRequestInterface $request): ?Service
-    {
+    public static function getAuthenticatedService(
+        ServerRequestInterface $request
+    ): ?Service {
         $service = $request->getAttribute('authenticated_service');
         return $service instanceof Service ? $service : null;
     }
@@ -209,8 +280,9 @@ class ApiKeyMiddleware implements MiddlewareInterface
     /**
      * Récupère l'ID du service authentifié depuis la requête
      */
-    public static function getServiceId(ServerRequestInterface $request): ?string
-    {
+    public static function getServiceId(
+        ServerRequestInterface $request
+    ): ?string {
         $serviceId = $request->getAttribute('service_id');
         return is_string($serviceId) ? $serviceId : null;
     }
@@ -218,8 +290,9 @@ class ApiKeyMiddleware implements MiddlewareInterface
     /**
      * Récupère le nom du service authentifié depuis la requête
      */
-    public static function getServiceName(ServerRequestInterface $request): ?string
-    {
+    public static function getServiceName(
+        ServerRequestInterface $request
+    ): ?string {
         $serviceName = $request->getAttribute('service_name');
         return is_string($serviceName) ? $serviceName : null;
     }

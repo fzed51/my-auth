@@ -25,6 +25,15 @@ class CorsMiddleware implements MiddlewareInterface
     private bool $allowCredentials;
     private int $maxAge;
 
+    /**
+
+
+     * Constructor
+
+
+     */
+
+
     public function __construct(
         array $allowedOrigins = ['*'],
         array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -39,6 +48,8 @@ class CorsMiddleware implements MiddlewareInterface
         bool $allowCredentials = true,
         int $maxAge = 86400 // 24 heures
     ) {
+
+
         $this->allowedOrigins = $allowedOrigins;
         $this->allowedMethods = $allowedMethods;
         $this->allowedHeaders = $allowedHeaders;

@@ -63,10 +63,17 @@ class AuthController
      * @param UserService              $userService     The user service instance
      * @param ResponseFactoryInterface $responseFactory The response factory instance
      */
+    /**
+
+     * Constructor
+
+     */
+
     public function __construct(
         UserService $userService,
         ResponseFactoryInterface $responseFactory
     ) {
+
         $this->userService = $userService;
         $this->responseFactory = $responseFactory;
     }

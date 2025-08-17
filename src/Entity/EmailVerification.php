@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Entity Class for MyAuth
+ *
+ * @package MyAuth\Entity
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Entity;
@@ -17,6 +24,15 @@ class EmailVerification
     private ?DateTime $usedAt;
     private DateTime $createdAt;
 
+    /**
+
+
+     * Constructor
+
+
+     */
+
+
     public function __construct(
         string $id,
         string $userId,
@@ -26,6 +42,8 @@ class EmailVerification
         ?DateTime $usedAt = null,
         ?DateTime $createdAt = null
     ) {
+
+
         $this->validateToken($token);
 
         $this->id = $id;
@@ -37,45 +55,180 @@ class EmailVerification
         $this->createdAt = $createdAt ?? new DateTime();
     }
 
+    /**
+
+
+     * Get the id
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
+
     public function getId(): string
     {
         return $this->id;
     }
+
+    /**
+
+
+     * Get the userId
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
 
     public function getUserId(): string
     {
         return $this->userId;
     }
 
+    /**
+
+
+     * Get the token
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
+
     public function getToken(): string
     {
         return $this->token;
     }
+
+    /**
+
+
+     * Get the expiresAt
+
+
+     *
+
+
+     * @return DateTime
+
+
+     */
+
 
     public function getExpiresAt(): DateTime
     {
         return $this->expiresAt;
     }
 
+    /**
+
+
+     * Check if used
+
+
+     *
+
+
+     * @return bool
+
+
+     */
+
+
     public function isUsed(): bool
     {
         return $this->isUsed;
     }
+
+    /**
+
+
+     * Get the usedAt
+
+
+     *
+
+
+     * @return ?DateTime
+
+
+     */
+
 
     public function getUsedAt(): ?DateTime
     {
         return $this->usedAt;
     }
 
+    /**
+
+
+     * Get the createdAt
+
+
+     *
+
+
+     * @return DateTime
+
+
+     */
+
+
     public function getCreatedAt(): DateTime
     {
         return $this->createdAt;
     }
 
+    /**
+
+
+     * Check if expired
+
+
+     *
+
+
+     * @return bool
+
+
+     */
+
+
     public function isExpired(): bool
     {
         return new DateTime() > $this->expiresAt;
     }
+
+    /**
+
+
+     * Check if valid
+
+
+     *
+
+
+     * @return bool
+
+
+     */
+
 
     public function isValid(): bool
     {

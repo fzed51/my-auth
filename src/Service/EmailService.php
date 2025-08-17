@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Service Class for MyAuth
+ *
+ * @package MyAuth\Service
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Service;
@@ -9,6 +16,15 @@ use MyAuth\Entity\User;
 class EmailService extends AbstractService
 {
     private array $config;
+
+    /**
+
+
+     * Constructor
+
+
+     */
+
 
     public function __construct(array $config = [])
     {

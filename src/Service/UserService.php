@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Service Class for MyAuth
+ *
+ * @package MyAuth\Service
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Service;
@@ -20,11 +27,22 @@ class UserService extends AbstractService
     private EmailVerificationRepository $verificationRepository;
     private EmailService $emailService;
 
+    /**
+
+
+     * Constructor
+
+
+     */
+
+
     public function __construct(
         UserRepository $userRepository,
         EmailVerificationRepository $verificationRepository,
         EmailService $emailService
     ) {
+
+
         $this->userRepository = $userRepository;
         $this->verificationRepository = $verificationRepository;
         $this->emailService = $emailService;

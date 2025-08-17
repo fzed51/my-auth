@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Service Class for MyAuth
+ *
+ * @package MyAuth\Service
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Service;
@@ -16,6 +23,15 @@ use MyAuth\Exception\ServiceNotFoundException;
 class ServiceAuthService extends AbstractService
 {
     private ServiceRepository $serviceRepository;
+
+    /**
+
+
+     * Constructor
+
+
+     */
+
 
     public function __construct(ServiceRepository $serviceRepository)
     {
@@ -89,6 +105,16 @@ class ServiceAuthService extends AbstractService
     /**
      * Récupère tous les services actifs
      */
+    /**
+
+     * Get the activeServices
+
+     *
+
+     * @return array
+
+     */
+
     public function getActiveServices(): array
     {
         return $this->serviceRepository->findAllActive();
@@ -166,6 +192,16 @@ class ServiceAuthService extends AbstractService
     /**
      * Obtient des statistiques sur les services
      */
+    /**
+
+     * Get the servicesStatistics
+
+     *
+
+     * @return array
+
+     */
+
     public function getServicesStatistics(): array
     {
         $allServices = $this->serviceRepository->findAll();

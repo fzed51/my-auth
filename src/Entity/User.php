@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Entity Class for MyAuth
+ *
+ * @package MyAuth\Entity
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Entity;
@@ -19,6 +26,15 @@ class User
     private DateTime $createdAt;
     private DateTime $updatedAt;
 
+    /**
+
+
+     * Constructor
+
+
+     */
+
+
     public function __construct(
         string $id,
         string $email,
@@ -30,6 +46,8 @@ class User
         ?DateTime $createdAt = null,
         ?DateTime $updatedAt = null
     ) {
+
+
         $this->validateEmail($email);
         $this->validateName($firstName, 'firstName');
         $this->validateName($lastName, 'lastName');
@@ -45,50 +63,200 @@ class User
         $this->updatedAt = $updatedAt ?? new DateTime();
     }
 
+    /**
+
+
+     * Get the id
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
+
     public function getId(): string
     {
         return $this->id;
     }
+
+    /**
+
+
+     * Get the email
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
 
     public function getEmail(): string
     {
         return $this->email;
     }
 
+    /**
+
+
+     * Get the passwordHash
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
+
     public function getPasswordHash(): string
     {
         return $this->passwordHash;
     }
+
+    /**
+
+
+     * Check if active
+
+
+     *
+
+
+     * @return bool
+
+
+     */
+
 
     public function isActive(): bool
     {
         return $this->isActive;
     }
 
+    /**
+
+
+     * Check if verified
+
+
+     *
+
+
+     * @return bool
+
+
+     */
+
+
     public function isVerified(): bool
     {
         return $this->isVerified;
     }
+
+    /**
+
+
+     * Get the firstName
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
 
     public function getFirstName(): string
     {
         return $this->firstName;
     }
 
+    /**
+
+
+     * Get the lastName
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
+
     public function getLastName(): string
     {
         return $this->lastName;
     }
+
+    /**
+
+
+     * Get the fullName
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
 
     public function getFullName(): string
     {
         return trim($this->firstName . ' ' . $this->lastName);
     }
 
+    /**
+
+
+     * Get the createdAt
+
+
+     *
+
+
+     * @return DateTime
+
+
+     */
+
+
     public function getCreatedAt(): DateTime
     {
         return $this->createdAt;
     }
+
+    /**
+
+
+     * Get the updatedAt
+
+
+     *
+
+
+     * @return DateTime
+
+
+     */
+
 
     public function getUpdatedAt(): DateTime
     {

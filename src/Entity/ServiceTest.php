@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Test Class for MyAuth
+ *
+ * @package MyAuth\Entity
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Entity;

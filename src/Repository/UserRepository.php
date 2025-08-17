@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Repository Class for MyAuth
+ *
+ * @package MyAuth\Repository
+ * @author  MyAuth Team
+ */
+
 declare(strict_types=1);
 
 namespace MyAuth\Repository;
@@ -13,6 +20,21 @@ use PDOException;
 class UserRepository extends AbstractRepository
 {
     protected string $tableName = 'users';
+
+    /**
+
+
+     * Get the tableName
+
+
+     *
+
+
+     * @return string
+
+
+     */
+
 
     public function getTableName(): string
     {

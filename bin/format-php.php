@@ -68,8 +68,27 @@ class PSR12ASTFormatter
     {
         $lines = explode("\n", $code);
         $result = [];
+        $inMultiLineString = false;
+        $stringDelimiter = null;
         
-        foreach ($lines as $line) {
+        foreach ($lines as $lineIndex => $line) {
+            // Détecter si on est dans une chaîne multi-lignes
+            $stringStatus = $this->detectMultiLineString($line, $inMultiLineString, $stringDelimiter);
+            $inMultiLineString = $stringStatus['inString'];
+            $stringDelimiter = $stringStatus['delimiter'];
+            
+            // Si on est dans une chaîne multi-lignes, ne pas reformater
+            if ($inMultiLineString) {
+                $result[] = $line;
+                continue;
+            }
+            
+            // Si la ligne contient une chaîne multi-lignes qui commence, ne pas reformater
+            if ($this->containsMultiLineStringStart($line)) {
+                $result[] = $line;
+                continue;
+            }
+            
             if (strlen($line) <= $this->maxLineLength) {
                 $result[] = $line;
                 continue;
@@ -84,6 +103,51 @@ class PSR12ASTFormatter
     }
     
     /**
+     * Détecte si on est dans une chaîne multi-lignes et met à jour l'état
+     */
+    private function detectMultiLineString(string $line, bool $currentlyInString, ?string $currentDelimiter): array
+    {
+        if (!$currentlyInString) {
+            // Chercher le début d'une chaîne multi-lignes
+            if (preg_match('/\$\w+\s*=\s*["\']/', $line) && !preg_match('/["\'];?\s*$/', $line)) {
+                // Ligne commence une assignation avec une chaîne qui ne se termine pas
+                preg_match('/(["\'])/', $line, $matches);
+                return ['inString' => true, 'delimiter' => $matches[1] ?? null];
+            }
+            return ['inString' => false, 'delimiter' => null];
+        } else {
+            // On est déjà dans une chaîne, chercher la fin
+            if ($currentDelimiter && strpos($line, $currentDelimiter . ';') !== false) {
+                return ['inString' => false, 'delimiter' => null];
+            }
+            return ['inString' => true, 'delimiter' => $currentDelimiter];
+        }
+    }
+    
+    /**
+     * Vérifie si une ligne contient le début d'une chaîne multi-lignes
+     */
+    private function containsMultiLineStringStart(string $line): bool
+    {
+        // Détecter les patterns comme: $var = "... ou $var = '...
+        // mais qui ne se terminent pas sur la même ligne
+        if (preg_match('/\$\w+\s*=\s*["\']/', $line)) {
+            // Vérifier si la chaîne ne se ferme pas sur la même ligne
+            $hasOpenQuote = preg_match('/["\']/', $line);
+            $hasCloseQuote = preg_match('/["\'];?\s*$/', $line);
+            
+            return $hasOpenQuote && !$hasCloseQuote;
+        }
+        
+        // Détecter aussi les chaînes HEREDOC/NOWDOC
+        if (preg_match('/<<<[\'"]?\w+[\'"]?/', $line)) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
      * Casse une ligne longue de manière intelligente
      */
     private function breakLongLine(string $line): array
@@ -93,7 +157,12 @@ class PSR12ASTFormatter
         $indent = $matches[1];
         $extraIndent = '    '; // 4 espaces supplémentaires pour les continuations
         
-        // Points de cassure préférentiels
+        // Vérifier si la ligne contient des chaînes de caractères
+        if ($this->containsString($line)) {
+            return $this->breakLineWithStrings($line, $indent, $extraIndent);
+        }
+        
+        // Points de cassure préférentiels (en dehors des chaînes)
         $breakPoints = [
             ', ',     // Paramètres de fonction
             ' && ',   // Opérateurs logiques
@@ -104,16 +173,13 @@ class PSR12ASTFormatter
         ];
         
         foreach ($breakPoints as $breakPoint) {
-            if (strpos($line, $breakPoint) !== false) {
+            if (strpos($line, $breakPoint) !== false && !$this->isInsideString($line, strpos($line, $breakPoint))) {
                 return $this->breakAtPoint($line, $breakPoint, $indent, $extraIndent);
             }
         }
         
-        // Cassure par défaut à 80 caractères
-        return [
-            substr($line, 0, $this->maxLineLength - 3) . '...',
-            $indent . $extraIndent . substr($line, $this->maxLineLength - 3)
-        ];
+        // Si aucun point de cassure trouvé, essayer de casser aux espaces
+        return $this->breakAtWhitespace($line, $indent, $extraIndent);
     }
     
     /**
@@ -142,6 +208,95 @@ class PSR12ASTFormatter
         
         $result[] = $currentLine;
         return $result;
+    }
+    
+    /**
+     * Vérifie si une ligne contient des chaînes de caractères
+     */
+    private function containsString(string $line): bool
+    {
+        return preg_match('/["\']/', $line) === 1;
+    }
+    
+    /**
+     * Vérifie si une position dans la ligne est à l'intérieur d'une chaîne
+     */
+    private function isInsideString(string $line, int $position): bool
+    {
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $escaped = false;
+        
+        for ($i = 0; $i < $position && $i < strlen($line); $i++) {
+            $char = $line[$i];
+            
+            if ($escaped) {
+                $escaped = false;
+                continue;
+            }
+            
+            if ($char === '\\') {
+                $escaped = true;
+                continue;
+            }
+            
+            if ($char === "'" && !$inDoubleQuote) {
+                $inSingleQuote = !$inSingleQuote;
+            } elseif ($char === '"' && !$inSingleQuote) {
+                $inDoubleQuote = !$inDoubleQuote;
+            }
+        }
+        
+        return $inSingleQuote || $inDoubleQuote;
+    }
+    
+    /**
+     * Casse une ligne contenant des chaînes de caractères
+     */
+    private function breakLineWithStrings(string $line, string $indent, string $extraIndent): array
+    {
+        // Pour les lignes avec des chaînes, essayer de casser aux points sûrs
+        $safeBreakPoints = [
+            ' . ', // Concaténation de chaînes
+            ', ',  // Paramètres de fonction
+        ];
+        
+        foreach ($safeBreakPoints as $breakPoint) {
+            $pos = strpos($line, $breakPoint);
+            if ($pos !== false && !$this->isInsideString($line, $pos)) {
+                return $this->breakAtPoint($line, $breakPoint, $indent, $extraIndent);
+            }
+        }
+        
+        // Si impossible de casser proprement, laisser la ligne longue
+        return [$line];
+    }
+    
+    /**
+     * Casse une ligne aux espaces disponibles
+     */
+    private function breakAtWhitespace(string $line, string $indent, string $extraIndent): array
+    {
+        $maxLength = $this->maxLineLength;
+        
+        // Chercher le dernier espace avant la limite
+        $cutPosition = $maxLength;
+        for ($i = $maxLength - 1; $i > strlen($indent); $i--) {
+            if (isset($line[$i]) && $line[$i] === ' ' && !$this->isInsideString($line, $i)) {
+                $cutPosition = $i;
+                break;
+            }
+        }
+        
+        // Si aucun espace trouvé, laisser la ligne intacte
+        if ($cutPosition >= $maxLength - 1) {
+            return [$line];
+        }
+        
+        return [
+            rtrim(substr($line, 0, $cutPosition)),
+            $indent . $extraIndent . ltrim(substr($line, $cutPosition))
+        ];
     }
 }
 

@@ -6,8 +6,8 @@
  * Utilise nikic/php-parser pour analyser et reformater le code PHP
  * selon les standards PSR-12 avec une limite de 80 caractères par ligne.
  * 
- * Usage: php format-php-ast.php -f fichier.php
- *        php format-php-ast.php -h
+ * Usage: php format-php.php -f fichier.php
+ *        php format-php.php -h
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';

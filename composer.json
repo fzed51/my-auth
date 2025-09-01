@@ -34,7 +34,7 @@
         "stan": "phpstan analyse src/ --level=max --memory-limit=512M",
         "scan-long-lines": "php bin/scan-long-lines.php",
         "auto-format": "php bin/auto-format.php",
-        "format-ast": "php bin/format-php-ast.php",
+        "format": "php bin/format-php.php",
         "quality": [
             "@cs",
             "@stan",

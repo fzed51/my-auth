@@ -487,8 +487,10 @@ class AuthControllerTest extends TestCase
                 $this->callback(
                     function ($content) {
                         $data = $this->decodeJson($content);
+                        if (!isset($data['data']) || !is_array($data['data'])) {
+                            return false;
+                        }
                         return $data['success'] === true &&
-                           isset($data['data']) &&
                            $data['data']['email'] === 'test@example.com' &&
                            !isset($data['data']['password_hash']);
                     }
@@ -539,9 +541,11 @@ class AuthControllerTest extends TestCase
                 $this->callback(
                     function ($content) {
                         $data = $this->decodeJson($content);
+                        if (!isset($data['data']) || !is_array($data['data'])) {
+                            return false;
+                        }
                         return $data['success'] === true &&
                            $data['message'] === 'Profile updated successfully' &&
-                           isset($data['data']) &&
                            $data['data']['firstName'] === 'Jane' &&
                            $data['data']['lastName'] === 'Smith';
                     }

@@ -211,7 +211,7 @@ class AuthController
         try {
             $userId = $request->getAttribute('user_id');
 
-            if (empty($userId)) {
+            if (empty($userId) || !is_string($userId)) {
                 return $this->createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
             }
 
@@ -243,7 +243,7 @@ class AuthController
             $userId = $request->getAttribute('user_id');
             $data = $this->getJsonBody($request);
 
-            if (empty($userId)) {
+            if (empty($userId) || !is_string($userId)) {
                 return $this->createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
             }
 
@@ -278,7 +278,7 @@ class AuthController
             $userId = $request->getAttribute('user_id');
             $data = $this->getJsonBody($request);
 
-            if (empty($userId)) {
+            if (empty($userId) || !is_string($userId)) {
                 return $this->createErrorResponse(401, 'Unauthorized', 'User ID not found in request');
             }
 
@@ -327,7 +327,11 @@ class AuthController
             throw new InvalidArgumentException('Invalid JSON in request body');
         }
 
-        return $data ?? [];
+        if (!is_array($data)) {
+            throw new InvalidArgumentException('JSON must be an object');
+        }
+
+        return $data;
     }
 
     private function createErrorResponse(int $statusCode, string $error, string $message): ResponseInterface

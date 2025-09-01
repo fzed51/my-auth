@@ -133,6 +133,7 @@ class UserRepositoryTest extends TestCase
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         $this->assertNotFalse($row);
+        $this->assertIsArray($row);
         $this->assertEquals('test-id', $row['id']);
         $this->assertEquals('test@example.com', $row['email']);
         $this->assertEquals('hash', $row['password_hash']);
@@ -191,6 +192,8 @@ class UserRepositoryTest extends TestCase
         $stmt->execute(['test-id']);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
+        $this->assertNotFalse($row);
+        $this->assertIsArray($row);
         $this->assertEquals('Jane', $row['first_name']);
         $this->assertEquals('Smith', $row['last_name']);
         $this->assertEquals(1, $row['is_active']);

@@ -50,7 +50,7 @@ class EmailVerificationRepository extends AbstractRepository
         $stmt->execute(['token' => $token]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$data) {
+        if (!$data || !is_array($data)) {
             return null;
         }
 
@@ -70,7 +70,7 @@ class EmailVerificationRepository extends AbstractRepository
         $stmt->execute(['user_id' => $userId]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$data) {
+        if (!$data || !is_array($data)) {
             return null;
         }
 

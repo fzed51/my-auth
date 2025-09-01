@@ -22,20 +22,10 @@ class UserRepository extends AbstractRepository
     protected string $tableName = 'users';
 
     /**
-
-
      * Get the tableName
-
-
      *
-
-
      * @return string
-
-
      */
-
-
     public function getTableName(): string
     {
         return 'users';
@@ -50,7 +40,7 @@ class UserRepository extends AbstractRepository
 
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$data) {
+        if (!$data || !is_array($data)) {
             return null;
         }
 
@@ -77,7 +67,7 @@ class UserRepository extends AbstractRepository
 
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$data) {
+        if (!$data || !is_array($data)) {
             return null;
         }
 
@@ -189,7 +179,9 @@ class UserRepository extends AbstractRepository
 
         $users = [];
         while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $users[] = User::fromArray($data);
+            if (is_array($data)) {
+                $users[] = User::fromArray($data);
+            }
         }
 
         return $users;
